@@ -1,6 +1,7 @@
 
 The MIT License (MIT)
 
+Copyright (c) 2024 3w36zj6
 Copyright (c) 2016 taichi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
