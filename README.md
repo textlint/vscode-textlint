@@ -2,6 +2,11 @@
 
 Extension to integrate [textlint](https://textlint.github.io/) into VSCode.
 
+> [!NOTE]
+> This repository is fork of [taichi/vscode-textlint](https://github.com/taichi/vscode-textlint).
+> 
+> The [MIT License](LICENSE) from upstream repository continues to be honored and upheld.
+
 ## Development setup
 
 - open `vscode-textlint.code-workspace` by VS Code
