@@ -6,16 +6,16 @@
   "categories": [
     "Linters"
   ],
-  "homepage": "https://github.com/taichi/vscode-textlint",
+  "homepage": "https://github.com/3w36zj6/vscode-textlint",
   "bugs": {
-    "url": "https://github.com/taichi/vscode-textlint/issues"
+    "url": "https://github.com/3w36zj6/vscode-textlint/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/taichi/vscode-textlint"
+    "url": "https://github.com/3w36zj6/vscode-textlint"
   },
   "license": "MIT",
-  "publisher": "taichi",
+  "publisher": "3w36zj6",
   "main": "./dist/extension",
   "scripts": {
     "clean": "rimraf dist out node_modules",

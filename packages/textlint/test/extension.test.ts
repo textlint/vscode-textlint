@@ -14,7 +14,7 @@ suite("Extension Tests", () => {
     commands.executeCommand("textlint.showOutputChannel");
 
     function waitForActive(resolve): void {
-      const ext = extensions.getExtension("taichi.vscode-textlint");
+      const ext = extensions.getExtension("3w36zj6.vscode-textlint");
       if (typeof ext === "undefined" || ext.isActive === false) {
         setTimeout(waitForActive.bind(null, resolve), 50);
       } else {

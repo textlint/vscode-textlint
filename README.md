@@ -1,4 +1,4 @@
-# vscode-textlint ![push](https://github.com/taichi/vscode-textlint/actions/workflows/push.yml/badge.svg)
+# vscode-textlint ![push](https://github.com/3w36zj6/vscode-textlint/actions/workflows/push.yml/badge.svg)
 
 Extension to integrate [textlint](https://textlint.github.io/) into VSCode.
 

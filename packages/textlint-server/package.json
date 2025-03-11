@@ -4,7 +4,7 @@
   "description": "Textlint Linter Server",
   "repository": {
     "type": "git",
-    "url": "https://github.com/taichi/vscode-textlint"
+    "url": "https://github.com/3w36zj6/vscode-textlint"
   },
   "license": "MIT",
   "main": "lib/server.js",
