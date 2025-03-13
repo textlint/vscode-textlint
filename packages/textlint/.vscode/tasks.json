@@ -11,7 +11,7 @@
   "tasks": [
     {
       "type": "npm",
-      "script": "compile",
+      "script": "tsc",
       "group": "build",
       "presentation": {
         "panel": "dedicated",

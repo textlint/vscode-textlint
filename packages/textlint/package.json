@@ -1,8 +1,8 @@
 {
-  "name": "vscode-textlint",
-  "displayName": "vscode-textlint",
+  "name": "textlint",
+  "displayName": "textlint",
   "version": "0.11.0",
-  "description": "Integrates Textlint into VS Code.",
+  "description": "Integrates textlint into VS Code.",
   "categories": [
     "Linters"
   ],
@@ -18,15 +18,11 @@
   "publisher": "3w36zj6",
   "main": "./dist/extension",
   "scripts": {
-    "clean": "rimraf dist out node_modules",
-    "clean:server": "cd ../textlint-server && npm run clean",
-    "compile": "tsc -p ./",
-    "webpack": "webpack --mode production",
-    "pretest": "npm-run-all --serial clean --parallel compile webpack",
+    "clean": "rimraf dist out",
+    "tsc": "tsc -p ./",
+    "pretest": "npm run tsc",
     "test": "node ./out/test/runTest.js",
-    "setup": "npm install --production && cd ../textlint-server && npm install --production",
-    "vscode:prepublish": "npm-run-all --parallel clean clean:server --serial setup webpack",
-    "watch": "webpack --mode development --watch"
+    "package": "vsce package --no-dependencies"
   },
   "contributes": {
     "commands": [

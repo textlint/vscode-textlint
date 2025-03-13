@@ -7,8 +7,9 @@
   ],
   "scripts": {
     "clean": "npm run clean --ws",
-    "compile": "npm run compile --ws",
-    "webpack": "npm run webpack -w vscode-textlint",
+    "tsc": "npm run tsc --ws",
+    "build": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
     "test": "npm run test --ws --if-present",
     "lint": "npm exec --ws -- eslint --config .eslintrc.json src/**.ts",
     "fix": "run-s fix:prettier fix:eslint",
@@ -16,7 +17,9 @@
     "fix:prettier": "npm exec --ws -- prettier --write .  --config ../../package.json --ignore-path ../../.gitignore",
     "sort": "npm exec --include-workspace-root --ws -- sort-package-json",
     "version": "npm version --ws ",
-    "upgrade": "npm exec --ws -- ncu -u"
+    "upgrade": "npm exec --ws -- ncu -u",
+    "prepackage": "npm run build",
+    "package": "npm run package -w packages/textlint"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.2.0",

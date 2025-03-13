@@ -12,9 +12,8 @@
     "lib"
   ],
   "scripts": {
-    "clean": "rimraf lib node_modules",
-    "compile": "tsc -p .",
-    "watch": "tsc -watch -p ./"
+    "clean": "rimraf lib",
+    "tsc": "tsc -p ."
   },
   "dependencies": {
     "glob": "^7.2.0",
