@@ -19,7 +19,7 @@
 	"settings": {
     "editor.formatOnSave": false,
     "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": true
+      "source.fixAll.eslint": "explicit"
     },
     "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
