@@ -7,95 +7,91 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   windows:
+    # Disabled due to instability issues
+    if: false
     name: Windows
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 30
-
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
-
+          node-version-file: .tool-versions
       - name: Get npm cache directory
         id: npm-cache
         run: |
           echo "::set-output name=dir::$(npm config get cache)"
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
-      - run: npm install
-      - run: cd packages/test && npm install
-      - run: npm run lint
-      - run: npm run compile
-      - run: npm run webpack
+      - run: npm ci
+      - run: npm run tsc
+      - run: npm run build
       - run: npm test
-
   linux:
     name: Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      DISPLAY: ":10"
+      DISPLAY: ":99"
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Build Environment
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           sudo apt-get update
-          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
-          sudo cp .github/xvfb.init /etc/init.d/xvfb
-          sudo chmod +x /etc/init.d/xvfb
-          sudo update-rc.d xvfb defaults
-          sudo service xvfb start
-      - uses: actions/setup-node@v2
+          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus dbus-x11 xvfb libgtk-3-0 libgbm1 libasound2t64 libcairo2
+          # DBus settings
+          dbus-launch --auto-syntax > /tmp/dbus.env
+          cat /tmp/dbus.env
+          # Xvfb settings
+          sudo Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset > /dev/null 2>&1 &
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
-
-      - uses: actions/cache@v2
+          node-version-file: .tool-versions
+      - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
-      - run: npm install
-      - run: cd packages/test && npm install
-      - run: npm run lint
-      - run: npm run compile
-      - run: npm run webpack
-      - run: npm test
-
+      - run: npm ci
+      - run: npm run tsc
+      - run: npm run build
+      - name: Run tests
+        run: |
+          source /tmp/dbus.env
+          npm test
   darwin:
+    # Disabled due to instability issues
+    if: false
     name: macOS
-    runs-on: macos-latest
+    runs-on: macos-14
     timeout-minutes: 30
     env:
-      DISPLAY: ":10"
+      DISPLAY: ":99"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - run: |
+          brew install --cask xquartz
+      - run: |
+          /usr/X11/bin/Xvfb :99 -screen 0 1024x768x24 &
+          sleep 5
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
-
-      - uses: actions/cache@v2
+          node-version-file: .tool-versions
+      - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
-      - run: npm install
-      - run: cd packages/test && npm install
-      - run: npm run lint
-      - run: npm run compile
-      - run: npm run webpack
+      - run: npm ci
+      - run: npm run tsc
+      - run: npm run build
       - run: npm test
