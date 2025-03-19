@@ -6,13 +6,13 @@
   "categories": [
     "Linters"
   ],
-  "homepage": "https://github.com/3w36zj6/vscode-textlint",
+  "homepage": "https://github.com/textlint/vscode-textlint",
   "bugs": {
-    "url": "https://github.com/3w36zj6/vscode-textlint/issues"
+    "url": "https://github.com/textlint/vscode-textlint/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/3w36zj6/vscode-textlint"
+    "url": "https://github.com/textlint/vscode-textlint"
   },
   "license": "MIT",
   "publisher": "3w36zj6",
