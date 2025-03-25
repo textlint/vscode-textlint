@@ -68,7 +68,7 @@ export class StatusBar {
         "need to restart this extension or check this extension setting and .textlintrc if textlint is not working.";
     } else {
       this._delegate.color = "#818589";
-      this._delegate.tooltip = `textlint is inanctive on ${languageId}.`;
+      this._delegate.tooltip = `textlint is inactive on ${languageId}.`;
     }
   }
 
