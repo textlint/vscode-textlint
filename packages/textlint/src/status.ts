@@ -62,7 +62,7 @@ export class StatusBar {
       return;
     }
 
-    if (-1 !== this._supports.indexOf(languageId)) {
+    if (this._supports.includes(languageId)) {
       this._delegate.color = "";
       this._delegate.tooltip =
         "need to restart this extension or check this extension setting and .textlintrc if textlint is not working.";
