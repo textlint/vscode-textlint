@@ -99,7 +99,10 @@ export class StatusBar {
     this._delegate.text = this.status.label;
     const languageId = editor?.document.languageId ?? "";
     this.activate(languageId);
-    this.show(this.serverRunning === false || this._status !== Status.OK || -1 !== this._supports.indexOf(languageId));
+
+    const shouldShowStatusBar =
+      !this.serverRunning || this._status !== Status.OK || this._supports.includes(languageId);
+    this.show(shouldShowStatusBar);
   }
 
   startProgress() {
