@@ -46,68 +46,78 @@ This extension contributes the following commands to the Command palette.
 
 ## Release Notes
 
+### 0.12.0
+
+- Change notification level from `ERROR` to `WARN` when executable file is not found ([#6](https://github.com/textlint/vscode-textlint/pull/6))
+  - Thanks to @azu
+- Improve `.textlintignore` support using `linter.scanFilePath()` API ([#7](https://github.com/textlint/vscode-textlint/pull/7))
+  - Thanks to @frozenbonito
+- Enable to emit activation events on all language files ([#8](https://github.com/textlint/vscode-textlint/pull/8))
+  - Thanks to @iku12phycho
+
 ### 0.11.0
+
 - Fix highlight range issue
-  - thanks for @Yuiki
+  - Thanks to @Yuiki
 
 ### 0.10.0
 
-- vscode workspace support
-- prepare for web-extension
+- Add vscode workspace support
+- Prepare for web-extension
 
 ### 0.9.0
 
-- add .textlintignore support
-  - thanks for @frozenbonito
+- Add .textlintignore support
+  - Thanks to @frozenbonito
 
 ### 0.8.0
 
-- add option to choose languages and improve positioning of highlighted
-  - thanks for @linhtto
+- Add option to choose languages and improve positioning of highlighted
+  - Thanks to @linhtto
 
 ### 0.7.0
 
-- add sets a target path support.
-  - thanks for @bells17
+- Add sets a target path support
+  - Thanks to @bells17
 
 ### 0.6.8
 
-- change default value of `textlint.run` to `onSave`
-- run tests on Azure Pipelines.
+- Change default value of `textlint.run` to `onSave`
+- Run tests on Azure Pipelines
 
 ### 0.6.5
 
-- add tex file support including `.tex`, `.latex`, `.doctex`.
-- this feature works with [LaTeX Workshop](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop) and [textlint-plugin-latex2e](https://github.com/ta2gch/textlint-plugin-latex2e).
+- Add tex file support including `.tex`, `.latex`, `.doctex`
+  - This feature works with [LaTeX Workshop](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop) and [textlint-plugin-latex2e](https://github.com/ta2gch/textlint-plugin-latex2e)
 
 ### 0.5.0
 
-- add `configPath` to configuration. recommend to use your user settings.
+- Add `configPath` to configuration. Recommend to use your user settings
 
 ### 0.4.0
 
-- read configuration file from `HOME` dir
-  - if you want to use global configuration, you should install textlint and plugins globally.
+- Read configuration file from `HOME` dir
+  - If you want to use global configuration, you should install textlint and plugins globally
 
 ### 0.3.0
 
-- update runtime dependencies
+- Update runtime dependencies
 
 ### 0.2.3
 
-- add tracing option.
+- Add tracing option
 
 ### 0.2.2
 
-- fix some bug.
+- Fix some bug
 
 ### 0.2.1
 
-- add progress notification to StatusBar
+- Add progress notification to StatusBar
 
 ### 0.2.0
 
-- Supports fixing errors.
+- Add support for fixing errors
 
 ### 0.1.0
 
