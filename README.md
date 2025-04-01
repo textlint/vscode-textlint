@@ -4,6 +4,11 @@
 
 Extension to integrate [textlint](https://textlint.github.io/) into VSCode.
 
+## How to install
+
+1. Visit [Visual Studio Code: textlint](https://marketplace.visualstudio.com/items?itemName=3w36zj6.textlint)
+2. Click Install
+
 ## Development setup
 
 1. open `vscode-textlint.code-workspace` by VS Code
