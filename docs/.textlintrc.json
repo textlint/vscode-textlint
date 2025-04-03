@@ -1,0 +1,18 @@
+{
+  "plugins": {},
+  "filters": {
+    "comments": true
+  },
+  "rules": {
+    "prh": {
+      "rulePaths": ["./prh.yaml"]
+    },
+    "rousseau": {
+      "showLevels": ["warning", "error"],
+      "ignoreTypes": ["sentence:uppercase", "passive", "weasel", "readibility"]
+    },
+    "unexpanded-acronym": {
+      "ignore_acronyms": ["SCG", "CLI", "XML", "YAML", "JSON", "TODO", "API", "HTML", "MIT", "FAQ", "VIEW"]
+    }
+  }
+}
