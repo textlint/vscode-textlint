@@ -1,4 +1,7 @@
 {
   "name": "vscode-textlint-docs",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "textlint": "^14.6.0"
+  }
 }
