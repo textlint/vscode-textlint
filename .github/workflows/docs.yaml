@@ -1,0 +1,38 @@
+name: Lint documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - uses: actions/cache@v4
+        id: cache-node-modules
+        with:
+          path: docs/node_modules
+          key: ${{ runner.os }}-docs-${{ hashFiles('docs/package-lock.json') }}
+      - working-directory: docs/
+        run: npm ci
+
+  textlint:
+    needs: setup
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - uses: actions/cache@v4
+        id: cache-node-modules
+        with:
+          path: docs/node_modules
+          key: ${{ runner.os }}-docs-${{ hashFiles('docs/package-lock.json') }}
+      - working-directory: docs/
+        run: npm run textlint
