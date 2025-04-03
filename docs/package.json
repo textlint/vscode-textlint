@@ -3,6 +3,7 @@
   "private": true,
   "devDependencies": {
     "textlint": "^14.6.0",
+    "textlint-filter-rule-comments": "^1.2.2",
     "textlint-rule-prh": "^6.0.0",
     "textlint-rule-rousseau": "^1.4.8",
     "textlint-rule-unexpanded-acronym": "^1.2.4"
