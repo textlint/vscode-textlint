@@ -6,13 +6,9 @@ Integrates [textlint](https://textlint.github.io/) into VS Code. If you are new 
 
 ![codeaction](https://github.com/textlint/vscode-textlint/raw/main/imgs/codeaction.png?raw=true)
 
-The extension uses the textlint library installed in the opened workspace folder. If the folder doesn't provide one the
-extension looks for a global install version. If you haven't installed textlint either locally or globally do so by running
-`npm install textlint` in the workspace folder for a local install or `npm install -g textlint` for a global install.
+The extension uses the textlint library installed in the opened workspace folder. If the folder doesn't provide one the extension looks for a global install version. If you haven't installed textlint either locally or globally do so by running `npm install textlint` in the workspace folder for a local install or `npm install -g textlint` for a global install.
 
-On new folders you might also need to create a `.textlintrc` configuration file. You can do this by either running
-[`textlint --init`](https://github.com/textlint/textlint/blob/master/docs/getting-started.md#configuration) in a terminal or by using the VS Code
-command `Create '.textlintrc' file`.
+On new folders you might also need to create a `.textlintrc` configuration file. You can do this by either running [`textlint --init`](https://github.com/textlint/textlint/blob/master/docs/getting-started.md#configuration) in a terminal or by using the VS Code command `Create '.textlintrc' file`.
 
 ## Settings Options
 
@@ -23,7 +19,7 @@ command `Create '.textlintrc' file`.
 - `textlint.nodePath`
   - use this setting if an installed textlint package can't be detected, for example `/myGlobalNodePackages/node_modules`.
 - `textlint.trace`
-  - Traces the communication between VSCode and the textlint linter service.
+  - Traces the communication between VS Code and the textlint linter service.
 - `textlint.configPath`
   - absolute path to textlint config file.
   - workspace settings are prioritize.
@@ -40,9 +36,9 @@ command `Create '.textlintrc' file`.
 This extension contributes the following commands to the Command palette.
 
 - Create '.textlintrc' File
-  - creates a new .textlintrc file.
+  - Creates a new `.textlintrc` file.
 - Fix all auto-fixable Problems
-  - applies textlint auto-fix resolutions to all fixable problems.
+  - Applies textlint auto-fix resolutions to all fixable problems.
 
 ## Release Notes
 
@@ -62,12 +58,12 @@ This extension contributes the following commands to the Command palette.
 
 ### 0.10.0
 
-- Add vscode workspace support
+- Add VS Code workspace support
 - Prepare for web-extension
 
 ### 0.9.0
 
-- Add .textlintignore support
+- Add `.textlintignore` support
   - Thanks to @frozenbonito
 
 ### 0.8.0

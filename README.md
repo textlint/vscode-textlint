@@ -2,7 +2,7 @@
 
 ![integration-tests](https://github.com/textlint/vscode-textlint/actions/workflows/integration-tests.yaml/badge.svg)
 
-Extension to integrate [textlint](https://textlint.github.io/) into VSCode.
+Extension to integrate [textlint](https://textlint.github.io/) into VS Code.
 
 ## How to install
 

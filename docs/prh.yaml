@@ -1,0 +1,20 @@
+version: 1
+rules:
+  - expected: textlint
+    options:
+      wordBoundary: true
+    prh: textlint is the official spelling.
+  - expected: VS Code
+    pattern: /\bvs ?code\b(?!-)/i
+    prh: VS Code is the official spelling.
+    specs:
+      - from: vscode
+        to: VS Code
+      - from: vs code
+        to: VS Code
+      - from: VsCode
+        to: VS Code
+      - from: VSCode
+        to: VS Code
+      - from: vscode-textlint
+        to: vscode-textlint
