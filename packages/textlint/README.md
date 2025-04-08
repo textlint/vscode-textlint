@@ -1,5 +1,9 @@
 # VS Code textlint extension
 
+> ## 📢 IMPORTANT NOTICE 📢
+>
+> This extension is the community-based maintenance version under the textlint organization. It has been transferred for continued maintenance and development. For more details, please refer to https://github.com/orgs/textlint/discussions/2.
+
 Integrates [textlint](https://textlint.github.io/) into VS Code. If you are new to textlint, check the [documentation](https://textlint.github.io/).
 
 ![hover](https://github.com/textlint/vscode-textlint/raw/main/imgs/hover.png?raw=true)
