@@ -66,12 +66,12 @@
         "textlint.configPath": {
           "type": "string",
           "default": null,
-          "description": "A absolute path to textlint config file."
+          "description": "An absolute path to textlint config file."
         },
         "textlint.ignorePath": {
           "type": "string",
           "default": null,
-          "description": "A absolute path to textlint ignore file."
+          "description": "An absolute path to textlint ignore file."
         },
         "textlint.nodePath": {
           "type": "string",
