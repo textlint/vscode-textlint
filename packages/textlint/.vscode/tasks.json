@@ -6,6 +6,9 @@
 // ${fileExtname}: the current opened file's extension
 // ${cwd}: the current working directory of the spawned process
 // A task runner that calls a custom npm script that compiles the extension.
+
+// NOTE: We do not use `"type": "npm"` because VS Code may incorrectly choose the package manager.
+// cf. https://github.com/microsoft/vscode/issues/170101
 {
   "version": "2.0.0",
   "tasks": [
