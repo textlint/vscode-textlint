@@ -10,8 +10,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "tsc",
+      "label": "npm: tsc",
+      "type": "shell",
+      "command": "npm run tsc",
       "group": "build",
       "presentation": {
         "panel": "dedicated",
@@ -20,8 +21,9 @@
       "problemMatcher": ["$tsc", "$ts-webpack"]
     },
     {
-      "type": "npm",
-      "script": "watch",
+      "label": "npm: watch",
+      "type": "shell",
+      "command": "npm --prefix ${workspaceFolder}/../../ run watch",
       "isBackground": true,
       "group": {
         "kind": "build",
