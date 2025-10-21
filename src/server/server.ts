@@ -7,6 +7,7 @@ import {
   DiagnosticSeverity,
   Position,
   Range,
+  MarkupKind,
   Files,
   TextDocuments,
   TextEdit,
@@ -39,8 +40,24 @@ import {
 } from "../shared/types";
 
 import { TextlintFixRepository, AutoFix } from "./autofix";
-import type { createLinter } from "./textlint";
+import type { createLinter, TextlintKernelDescriptor } from "./textlint";
 import type { TextlintMessage } from "@textlint/types";
+
+type TextlintAstNode = {
+  type: string;
+  range?: readonly [number, number];
+  loc?: {
+    start: {
+      line: number;
+      column: number;
+    };
+    end?: {
+      line: number;
+      column: number;
+    };
+  };
+  children?: TextlintAstNode[];
+};
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -53,6 +70,10 @@ type WorkspaceLinter = {
 };
 
 let settings: ServerInitializationOptions;
+/**
+ * A map for retrieving a TextlintKernelDescriptor by workspace folder URI.
+ */
+const descriptorRepo = new Map<string, TextlintKernelDescriptor>();
 const linterRepo: Map<string /* workspaceFolder uri */, WorkspaceLinter> = new Map();
 const fixRepo: Map<string /* uri */, TextlintFixRepository> = new Map();
 
@@ -63,6 +84,7 @@ connection.onInitialize(async (params) => {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Full,
       codeActionProvider: true,
+      hoverProvider: true,
       workspace: {
         workspaceFolders: {
           supported: true,
@@ -96,6 +118,7 @@ async function configureEngine(folders: WorkspaceFolder[] | null) {
       const descriptor = await mod.loadTextlintrc({
         configFilePath: configFile,
       });
+      descriptorRepo.set(folder.uri, descriptor);
       const linter = mod.createLinter({
         descriptor,
         ignoreFilePath: ignoreFile,
@@ -287,6 +310,29 @@ function lookupEngine(doc: TextDocument): [string, WorkspaceLinter | undefined] 
     }
   }
   TRACE(`lookupEngine ${doc.uri} not found`);
+  return ["", undefined];
+}
+
+/**
+ * Lookup the descriptor for a TextDocument.
+ * Returns the descriptor that best matches the given TextDocument by using the longest prefix match.
+ */
+function lookupDescriptor(doc: TextDocument): [string, TextlintKernelDescriptor | undefined] {
+  const uri = doc.uri;
+  TRACE(`lookupDescriptor ${uri}`);
+  let bestKey = "";
+  let bestDescriptor: TextlintKernelDescriptor | undefined = undefined;
+  for (const [key, desc] of descriptorRepo.entries()) {
+    if (startsWith(uri, key) && key.length > bestKey.length) {
+      bestKey = key;
+      bestDescriptor = desc;
+    }
+  }
+  if (bestDescriptor) {
+    TRACE(`lookupDescriptor ${uri} => ${bestKey}`);
+    return [bestKey, bestDescriptor];
+  }
+  TRACE(`lookupDescriptor ${uri} not found`);
   return ["", undefined];
 }
 
@@ -484,4 +530,131 @@ export function TRACE(message: string, data?: unknown) {
   }
 }
 
+/**
+ * Hover handler that returns the textlint AST node type at the hovered position.
+ */
+connection.onHover(async (params) => {
+  try {
+    const uri = params.textDocument.uri;
+    const document = documents.get(uri);
+    if (!document) {
+      return null;
+    }
+
+    const position = params.position;
+    const charOffset = document.offsetAt(position);
+
+    const [, descriptor] = lookupDescriptor(document);
+    if (!descriptor) {
+      return null;
+    }
+
+    const ext = URIUtils.extname(URI.parse(document.uri));
+    const pluginDescriptor = descriptor.findPluginDescriptorWithExt(ext);
+    if (!pluginDescriptor) {
+      return null;
+    }
+
+    const textProcessor = pluginDescriptor.processor.processor(ext);
+    const preProcessResult = await textProcessor.preProcess(document.getText(), document.uri);
+
+    const isAstWithAst = (x: unknown): x is { ast: TextlintAstNode } => {
+      return !!x && typeof x === "object" && "ast" in x;
+    };
+
+    const rootAst = isAstWithAst(preProcessResult)
+      ? preProcessResult.ast
+      : (preProcessResult as unknown as TextlintAstNode);
+
+    const nodeContainsOffset = (node: TextlintAstNode | undefined, off: number): boolean => {
+      if (!node) {
+        return false;
+      }
+      if (node.range && node.range.length === 2) {
+        return off >= node.range[0] && off <= node.range[1];
+      }
+      if (node.loc && node.loc.start) {
+        const startLine = Math.max(0, node.loc.start.line - 1);
+        const startCol = Math.max(0, node.loc.start.column);
+        let endLine = startLine;
+        let endCol = startCol;
+        if (node.loc.end) {
+          endLine = Math.max(0, node.loc.end.line - 1);
+          endCol = Math.max(0, node.loc.end.column);
+        }
+        const startOffset = document.offsetAt(Position.create(startLine, startCol));
+        const endOffset = document.offsetAt(Position.create(endLine, endCol));
+        return off >= startOffset && off <= endOffset;
+      }
+      return false;
+    };
+
+    const isParentNode = (node: TextlintAstNode): node is TextlintAstNode & { children: TextlintAstNode[] } => {
+      return Array.isArray(node.children);
+    };
+
+    type NodeMatch = {
+      node: TextlintAstNode;
+      ancestorTypes: string[];
+    };
+
+    const findBestNode = (node: TextlintAstNode, ancestors: string[]): NodeMatch | null => {
+      let bestMatch: NodeMatch | null = nodeContainsOffset(node, charOffset)
+        ? { node, ancestorTypes: ancestors }
+        : null;
+      if (isParentNode(node)) {
+        for (const childNode of node.children) {
+          const childMatch = findBestNode(childNode, ancestors.concat(node.type));
+          if (!childMatch) {
+            continue;
+          }
+          if (!bestMatch) {
+            bestMatch = childMatch;
+          } else if (childMatch.node.range && bestMatch.node.range) {
+            const childLength = childMatch.node.range[1] - childMatch.node.range[0];
+            const bestLength = bestMatch.node.range[1] - bestMatch.node.range[0];
+            if (childLength <= bestLength) {
+              bestMatch = childMatch;
+            }
+          } else {
+            bestMatch = childMatch;
+          }
+        }
+      }
+      return bestMatch;
+    };
+
+    const bestMatch = findBestNode(rootAst, []);
+    if (!bestMatch) {
+      return null;
+    }
+    const { node: bestNode, ancestorTypes } = bestMatch;
+
+    const parentChain = ancestorTypes.concat(bestNode.type);
+    const quotedParentChain = parentChain.length ? parentChain.map((t) => `\`${t}\``).join(" → ") : "(no parents)";
+    const hoverContents = {
+      kind: MarkupKind.Markdown,
+      value: `textlint AST node: **\`${bestNode.type}\`** (${quotedParentChain})`,
+    };
+
+    let hoverRange: Range | undefined = undefined;
+    if (bestNode.range && bestNode.range.length === 2) {
+      hoverRange = Range.create(document.positionAt(bestNode.range[0]), document.positionAt(bestNode.range[1]));
+    } else if (bestNode.loc && bestNode.loc.start) {
+      const start = Position.create(Math.max(0, bestNode.loc.start.line - 1), Math.max(0, bestNode.loc.start.column));
+      const end = bestNode.loc.end
+        ? Position.create(Math.max(0, bestNode.loc.end.line - 1), Math.max(0, bestNode.loc.end.column))
+        : start;
+      hoverRange = Range.create(start, end);
+    }
+
+    return {
+      contents: hoverContents,
+      range: hoverRange,
+    };
+  } catch (e) {
+    TRACE(`onHover failed: ${String(e)}`);
+    return null;
+  }
+});
 connection.listen();

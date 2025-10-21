@@ -1,4 +1,4 @@
-import type { TextlintFixResult, TextlintResult } from "@textlint/types";
+import type { TextlintFixResult, TextlintPluginProcessor, TextlintResult } from "@textlint/types";
 
 type ScanFilePathResult =
   | {
@@ -11,7 +11,10 @@ type ScanFilePathResult =
       status: "error";
     };
 
-type TextlintKernelDescriptor = unknown;
+export type TextlintKernelDescriptor = {
+  availableExtensions: string[];
+  findPluginDescriptorWithExt(ext: string): { processor: TextlintPluginProcessor } | undefined;
+};
 export type CreateLinterOptions = {
   descriptor: TextlintKernelDescriptor;
   ignoreFilePath?: string;
