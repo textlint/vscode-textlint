@@ -8,6 +8,7 @@
   "scripts": {
     "clean": "npm run clean --ws",
     "tsc": "npm run tsc --ws",
+    "type-check": "npm exec --ws -- tsc --noEmit",
     "build": "webpack --mode production",
     "watch": "webpack --mode development --watch",
     "test": "npm run test --ws --if-present",
