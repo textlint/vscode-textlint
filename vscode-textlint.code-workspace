@@ -8,12 +8,6 @@
 		},
 		{
 			"path": "packages/textlint-server"
-		},
-		{
-			"path": "packages/test"
-		},
-		{
-			"path": "packages/test-workspace"
 		}
 	],
 	"settings": {
