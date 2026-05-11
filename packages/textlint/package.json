@@ -42,6 +42,12 @@
         "command": "textlint.showOutputChannel"
       }
     ],
+    "configurationDefaults": {
+      "files.associations": {
+        ".textlintrc.json": "jsonc",
+        ".textlintignore": "ignore"
+      }
+    },
     "configuration": {
       "type": "object",
       "title": "textlint",
