@@ -80,8 +80,8 @@ connection.onInitialized(async () => {
   });
 });
 
-async function configureEngine(folders: WorkspaceFolder[]) {
-  for (const folder of folders) {
+async function configureEngine(folders: WorkspaceFolder[] | null) {
+  for (const folder of folders ?? []) {
     TRACE(`configureEngine ${folder.uri}`);
     const root = URI.parse(folder.uri).fsPath;
     try {
