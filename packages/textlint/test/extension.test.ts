@@ -195,7 +195,7 @@ suite("Extension tests", function () {
         const expectedDiagnostics = [
           {
             code: "common-misspellings",
-            message: "This is a commonly misspelled word. Correct it to you (common-misspellings)",
+            message: "This is a commonly misspelled word. Correct it to you",
             range: {
               start: { line: 0, character: 1 },
               end: { line: 0, character: 1 },
@@ -205,7 +205,7 @@ suite("Extension tests", function () {
           },
           {
             code: "common-misspellings",
-            message: "This is a commonly misspelled word. Correct it to you (common-misspellings)",
+            message: "This is a commonly misspelled word. Correct it to you",
             range: {
               start: { line: 2, character: 0 },
               end: { line: 2, character: 0 },
@@ -215,7 +215,7 @@ suite("Extension tests", function () {
           },
           {
             code: "common-misspellings",
-            message: "This is a commonly misspelled word. Correct it to you (common-misspellings)",
+            message: "This is a commonly misspelled word. Correct it to you",
             range: {
               start: { line: 4, character: 1 },
               end: { line: 4, character: 1 },

@@ -366,7 +366,6 @@ function toDiagnosticSeverity(severity?: number): DiagnosticSeverity {
 }
 
 function toDiagnostic(message: TextLintMessage): [TextLintMessage, Diagnostic] {
-  const txt = message.ruleId ? `${message.message} (${message.ruleId})` : message.message;
   const pos_start = Position.create(Math.max(0, message.line - 1), Math.max(0, message.column - 1));
   let offset = 0;
   if (message.message.indexOf("->") >= 0) {
@@ -378,7 +377,7 @@ function toDiagnostic(message: TextLintMessage): [TextLintMessage, Diagnostic] {
   }
   const pos_end = Position.create(Math.max(0, message.line - 1), Math.max(0, message.column - 1) + offset);
   const diag: Diagnostic = {
-    message: txt,
+    message: message.message,
     severity: toDiagnosticSeverity(message.severity),
     source: "textlint",
     range: Range.create(pos_start, pos_end),
