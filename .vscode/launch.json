@@ -8,7 +8,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "${workspaceFolder}/../../tests/fixtures/single-root-workspace",
+        "${workspaceFolder}/tests/fixtures/single-root-workspace",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--disable-extensions"
       ],
@@ -23,7 +23,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "${workspaceFolder}/../../tests/fixtures/multi-root-workspace/test.code-workspace",
+        "${workspaceFolder}/tests/fixtures/multi-root-workspace/test.code-workspace",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--disable-extensions"
       ],
@@ -48,7 +48,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "${workspaceFolder}/../../tests/fixtures/single-root-workspace",
+        "${workspaceFolder}/tests/fixtures/single-root-workspace",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out/test/suite",
         "--disable-extensions"

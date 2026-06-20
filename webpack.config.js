@@ -2,14 +2,14 @@
 
 const webpack = require("webpack");
 const path = require("path");
-const extensionPackage = require("./packages/textlint/package.json");
+const extensionPackage = require("./package.json");
 const merge = require("merge-options");
 
 /**@type {import('webpack').Configuration}*/
 const config = {
   target: "node",
   output: {
-    path: path.resolve(__dirname, "packages/textlint/dist"),
+    path: path.resolve(__dirname, "dist"),
     libraryTarget: "commonjs",
   },
   stats: {
@@ -43,7 +43,7 @@ const config = {
 
 /**@type {import('webpack').Configuration}*/
 const client = merge(config, {
-  entry: "./packages/textlint/src/extension.ts",
+  entry: "./src/client/extension.ts",
   output: {
     filename: "extension.js",
   },
@@ -57,7 +57,7 @@ const client = merge(config, {
 
 /**@type {import('webpack').Configuration}*/
 const server = merge(config, {
-  entry: "./packages/textlint-server/src/server.ts",
+  entry: "./src/server/server.ts",
   output: {
     filename: "server.js",
   },

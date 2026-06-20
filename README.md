@@ -19,7 +19,7 @@ Extension to integrate [textlint](https://textlint.github.io/) into VS Code.
 
 1. Run `npm ci` in the **root** folder
 2. Run `npm run package` in the **root** folder
-3. Run `npx vsce publish --packagePath ./packages/textlint/textlint-*.vsix` in the **root** folder
+3. Run `npx vsce publish --packagePath ./textlint-*.vsix` in the **root** folder
 
 ## Acknowledgements
 

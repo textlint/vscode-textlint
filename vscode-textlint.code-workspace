@@ -2,12 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "packages/textlint"
-		},
-		{
-			"path": "packages/textlint-server"
 		}
 	],
 	"settings": {

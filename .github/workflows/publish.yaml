@@ -20,4 +20,4 @@ jobs:
       - name: Package extension
         run: npm run package
       - name: Publish extension
-        run: npx vsce publish --packagePath ./packages/textlint/*.vsix --pat ${{ secrets.VSCE_PAT }}
+        run: npx vsce publish --packagePath ./*.vsix --pat ${{ secrets.VSCE_PAT }}
