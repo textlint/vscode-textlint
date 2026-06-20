@@ -51,10 +51,6 @@ This extension contributes the following commands to the Command palette:
 - Fix all auto-fixable Problems
   - Applies textlint auto-fix resolutions to all fixable problems in the current document.
 
-## Development
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and release process.
-
 ## Release notes
 
 ### 0.12.0
@@ -142,4 +138,8 @@ Since [v0.12.0](https://github.com/textlint/vscode-textlint/releases/tag/v0.12.0
 
 We'd like to express our gratitude to [@taichi](https://github.com/taichi) and all contributors. For more details, please see [github.com/orgs/textlint/discussions/2](https://github.com/orgs/textlint/discussions/2).
 
-The [MIT License](LICENSE) from the upstream repository continues to be honored and upheld.
+The [MIT License](https://github.com/textlint/vscode-textlint/blob/main/LICENSE) from the upstream repository continues to be honored and upheld.
+
+## Contributing
+
+See the [contributing guide](https://github.com/textlint/vscode-textlint/blob/main/CONTRIBUTING.md) for development setup and release process.
