@@ -1,1 +1,1 @@
-../packages/textlint/README.md
+../README.md

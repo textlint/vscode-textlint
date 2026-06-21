@@ -1,0 +1,8 @@
+node_modules
+out
+lib
+dist
+.vscode-test
+*.vsix
+
+tests/fixtures

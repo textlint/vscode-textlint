@@ -11,17 +11,15 @@ async function main() {
 
     // The path to the extension test script
     // Passed to --extensionTestsPath
-    const extensionTestsPath = path.resolve(__dirname, "./index");
+    const extensionTestsPath = path.resolve(__dirname, "./suite/index");
 
-    const workspaceFolder = path.resolve(__dirname, "../../../test");
+    const workspaceFolder = path.resolve(extensionDevelopmentPath, "tests/fixtures/single-root-workspace");
 
     try {
-      console.log("Running npm ci...");
       execSync("npm ci", {
         cwd: workspaceFolder,
         stdio: "inherit",
       });
-      console.log("Dependencies installed successfully");
     } catch (error) {
       console.error("Failed to install dependencies with npm ci");
       console.error(error);

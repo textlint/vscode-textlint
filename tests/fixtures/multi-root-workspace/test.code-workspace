@@ -7,7 +7,7 @@
 			"path": "second"
 		},
 		{
-			"path": "../test"
+			"path": "../single-root-workspace"
 		}
 	],
 	"settings": {

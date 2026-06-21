@@ -15,7 +15,7 @@ import {
   Diagnostic,
   DiagnosticSeverity,
 } from "vscode";
-import { ExtensionInternal } from "../src/extension";
+import { ExtensionInternal } from "../../client/extension";
 
 import { PublishDiagnosticsNotification } from "./types";
 import { TextEdit } from "vscode-languageclient/node";

@@ -1,8 +1,0 @@
-{
-  "files.exclude": {
-    "lib": false
-  },
-  "search.exclude": {
-    "lib": true
-  }
-}

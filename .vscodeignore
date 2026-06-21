@@ -1,6 +1,7 @@
 **/*
 !package.json
 !README.md
-!LICENSE.txt
+!CONTRIBUTING.md
+!LICENSE
 !textlint-icon_128x128.png
 !dist/*.js
