@@ -2,8 +2,14 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es6",
+    "esModuleInterop": true,
     "outDir": "out",
+    "rootDir": "src",
     "lib": ["es6", "DOM"],
+    // Remove these by fixing the existing implicit any/nullability issues.
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "useUnknownInCatchVariables": false,
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],

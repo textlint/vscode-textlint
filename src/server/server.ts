@@ -24,7 +24,7 @@ import * as os from "os";
 import * as fs from "fs";
 import * as path from "path";
 import * as glob from "glob";
-import * as minimatch from "minimatch";
+import minimatch from "minimatch";
 
 import {
   NoConfigNotification,
