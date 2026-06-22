@@ -89,47 +89,17 @@ async function configureEngine(folders: WorkspaceFolder[] | null) {
       const ignoreFile = lookupIgnore(root);
 
       const mod = await resolveModule(root);
-      const hasLinterAPI = "createLinter" in mod && "loadTextlintrc" in mod;
-      // textlint v13+
-      if (hasLinterAPI) {
-        const descriptor = await mod.loadTextlintrc({
-          configFilePath: configFile,
-        });
-        const linter = mod.createLinter({
-          descriptor,
-          ignoreFilePath: ignoreFile,
-        });
-        linterRepo.set(folder.uri, {
-          linter,
-          availableExtensions: descriptor.availableExtensions,
-        });
-      } else {
-        // TODO: These APIs are deprecated. Remove this code in the future.
-        // textlint v12 or older - deprecated engingles API
-        const engine = new mod.TextLintEngine({
-          configFile,
-          ignoreFile,
-        });
-        // polyfill for textlint v12
-        const linter: ReturnType<createLinter> = {
-          lintText: (text, filePath) => {
-            return engine.executeOnText(text, filePath);
-          },
-          lintFiles: (files) => {
-            return engine.executeOnFiles(files);
-          },
-          fixFiles: (files) => {
-            return engine.fixFiles(files);
-          },
-          fixText(text, filePath) {
-            return engine.fixText(text, filePath);
-          },
-        };
-        linterRepo.set(folder.uri, {
-          linter,
-          availableExtensions: engine.availableExtensions,
-        });
-      }
+      const descriptor = await mod.loadTextlintrc({
+        configFilePath: configFile,
+      });
+      const linter = mod.createLinter({
+        descriptor,
+        ignoreFilePath: ignoreFile,
+      });
+      linterRepo.set(folder.uri, {
+        linter,
+        availableExtensions: descriptor.availableExtensions,
+      });
     } catch (e) {
       TRACE("failed to configureEngine", e);
     }

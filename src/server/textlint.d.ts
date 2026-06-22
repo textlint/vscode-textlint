@@ -55,11 +55,6 @@ type ScanFilePathResult =
       status: "error";
     };
 
-interface TextLintEngine {
-  availableExtensions: string[];
-
-  executeOnText(text: string, ext: string): Thenable<TextLintResult[]>;
-}
 type TextlintKernelDescriptor = unknown;
 export type CreateLinterOptions = {
   descriptor: TextlintKernelDescriptor;
