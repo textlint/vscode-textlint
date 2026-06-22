@@ -50,7 +50,7 @@
       "args": [
         "${workspaceFolder}/tests/fixtures/single-root-workspace",
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--extensionTestsPath=${workspaceFolder}/out/test/suite",
+        "--extensionTestsPath=${workspaceFolder}/src/test/suite/index.ts",
         "--disable-extensions"
       ],
       "outFiles": ["${workspaceFolder}/dist/*.js"],
