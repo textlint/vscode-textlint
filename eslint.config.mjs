@@ -32,9 +32,16 @@ export default defineConfig([
       ],
       "@typescript-eslint/no-namespace": "warn",
 
+      "no-console": "error",
       curly: "warn",
       eqeqeq: "warn",
       "no-throw-literal": "warn",
+    },
+  },
+  {
+    files: ["src/test/**/*.ts"],
+    rules: {
+      "no-console": ["error", { allow: ["error"] }],
     },
   },
   eslintConfigPrettier,
