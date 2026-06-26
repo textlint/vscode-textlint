@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es6",
+    "target": "ES2022",
+    "strict": true,
     "esModuleInterop": true,
     "outDir": "out",
     "rootDir": "src",
-    "lib": ["es6", "DOM"],
-    // Remove these by fixing the existing implicit any/nullability issues.
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "useUnknownInCatchVariables": false,
+    "lib": ["ES2022"],
+    "types": ["node", "vscode"],
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
