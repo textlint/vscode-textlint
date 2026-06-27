@@ -1,6 +1,32 @@
 import { NotificationType0, NotificationType, RequestType } from "vscode-jsonrpc";
 import { TextDocumentIdentifier, TextEdit } from "vscode-languageserver-types";
 
+export type RunMode = "onSave" | "onType";
+export type TraceMode = "off" | "messages" | "verbose";
+
+export interface ServerInitializationOptions {
+  configPath: string | null;
+  ignorePath: string | null;
+  nodePath: string | null;
+  run: RunMode;
+  trace: TraceMode;
+  targetPath: string;
+}
+
+export interface ExtensionSettings extends ServerInitializationOptions {
+  languages: string[];
+  autoFixOnSave: boolean;
+}
+
+export const defaultServerInitializationOptions: ServerInitializationOptions = {
+  configPath: null,
+  ignorePath: null,
+  nodePath: null,
+  run: "onSave",
+  trace: "off",
+  targetPath: "",
+};
+
 export namespace ExitNotification {
   export interface ExitParams {
     code: number;

@@ -6,6 +6,7 @@ export interface AutoFix {
   ruleId: string;
   fix: TextLintFixCommand;
 }
+
 export class TextlintFixRepository {
   map: Map<string, AutoFix> = new Map();
 
@@ -21,7 +22,7 @@ export class TextlintFixRepository {
   }
 
   find(diags: Diagnostic[]): AutoFix[] {
-    return diags.map((d) => this.map.get(this.toKey(d))).filter((af) => af);
+    return diags.map((d) => this.map.get(this.toKey(d))).filter((fix) => fix !== undefined);
   }
 
   clear = () => this.map.clear();
@@ -59,7 +60,7 @@ export class TextlintFixRepository {
     return !!lastEdit && lastEdit.fix.range[1] > newEdit.fix.range[0];
   }
 
-  separatedValues(filter: (fix) => boolean = () => true): AutoFix[] {
+  separatedValues(filter: (fix: AutoFix) => boolean = () => true): AutoFix[] {
     const sv = this.sortedValues().filter(filter);
     if (sv.length < 1) {
       return sv;
