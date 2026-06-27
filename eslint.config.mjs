@@ -34,7 +34,7 @@ export default defineConfig([
 
       "no-console": "error",
       curly: "warn",
-      eqeqeq: "warn",
+      eqeqeq: "error",
       "no-throw-literal": "warn",
     },
   },
