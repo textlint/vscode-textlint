@@ -37,8 +37,8 @@ export class StatusBar {
   private _supports: string[];
   private _status = Status.OK;
   private _serverRunning = false;
-  private _intervalToken;
-  constructor(supports) {
+  private _intervalToken: ReturnType<typeof setInterval> | undefined;
+  constructor(supports: string[]) {
     this._supports = supports;
     this._delegate.text = this._status.label;
     window.onDidChangeActiveTextEditor((te) => this.updateWith(te));
@@ -95,7 +95,7 @@ export class StatusBar {
     this.updateWith(window.activeTextEditor);
   }
 
-  updateWith(editor: TextEditor) {
+  updateWith(editor: TextEditor | undefined) {
     this._delegate.text = this.status.label;
     const languageId = editor?.document.languageId ?? "";
     this.activate(languageId);
@@ -121,7 +121,7 @@ export class StatusBar {
   stopProgress() {
     if (this._intervalToken) {
       const tk = this._intervalToken;
-      this._intervalToken = null;
+      this._intervalToken = undefined;
       clearInterval(tk);
       this.update();
     }
