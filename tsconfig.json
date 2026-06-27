@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es6",
+    "target": "es2022",
     "esModuleInterop": true,
     "outDir": "out",
     "rootDir": "src",
-    "lib": ["es6", "DOM"],
+    "lib": ["es2022"],
     // Remove these by fixing the existing implicit any/nullability issues.
     "noImplicitAny": false,
     "strictNullChecks": false,
