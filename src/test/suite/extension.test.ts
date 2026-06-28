@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import fs from "fs-extra";
+import * as fs from "node:fs/promises";
 import * as path from "path";
 
 import { workspace, window, commands, extensions, Uri, Position, WorkspaceEdit, DiagnosticSeverity } from "vscode";
@@ -106,9 +106,7 @@ async function setupServerFixture(context: TestContext): Promise<{
 
   context.after(async () => {
     // Delete test file
-    if (await fs.pathExists(testFile)) {
-      await fs.unlink(testFile);
-    }
+    await fs.rm(testFile, { force: true });
 
     // Close editors
     await commands.executeCommand("workbench.action.closeAllEditors");
@@ -134,11 +132,7 @@ async function setupServerFixture(context: TestContext): Promise<{
   await internals.client.onReady();
 
   // Prepare test file
-  await fs.copy(sourceFile, testFile);
-  const exists = await fs.pathExists(testFile);
-  if (!exists) {
-    throw new Error(`Test file could not be created: ${testFile}`);
-  }
+  await fs.cp(sourceFile, testFile);
 
   return { testFile, disposables };
 }
