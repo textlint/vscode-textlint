@@ -35,19 +35,28 @@ import {
   AllFixesRequest,
   StartProgressNotification,
   StopProgressNotification,
-} from "./types";
+  ServerInitializationOptions,
+  ExtensionSettings,
+  defaultServerInitializationOptions,
+} from "../shared/types";
 
 import { Status, StatusBar } from "./status";
+
+const defaultConfig: ExtensionSettings = {
+  ...defaultServerInitializationOptions,
+  languages: [],
+  autoFixOnSave: false,
+};
 
 export interface ExtensionInternal {
   client: LanguageClient;
   statusBar: StatusBar;
-  onAllFixesComplete(fn: (te: TextEditor, edits: TextEdit[], ok: boolean) => void);
+  onAllFixesComplete(fn: (te: TextEditor, edits: TextEdit[], ok: boolean) => void): Disposable;
 }
 
 export function activate(context: ExtensionContext): ExtensionInternal {
   const client = newClient(context);
-  const statusBar = new StatusBar(getConfig("languages"));
+  const statusBar = new StatusBar(readConfig().languages);
   client.onReady().then(() => {
     client.onDidChangeState((event) => {
       statusBar.serverRunning = event.newState === ServerState.Running;
@@ -55,7 +64,7 @@ export function activate(context: ExtensionContext): ExtensionInternal {
     client.onNotification(StatusNotification.type, (p: StatusNotification.StatusParams) => {
       statusBar.status = to(p.status);
       if (p.message || p.cause) {
-        statusBar.status.log(client, p.message, p.cause);
+        statusBar.status.log(client, p.message ?? "", p.cause);
       }
     });
     client.onNotification(NoConfigNotification.type, (p) => {
@@ -111,8 +120,9 @@ function newClient(context: ExtensionContext): LanguageClient {
   // eslint-disable-next-line prefer-const
   let defaultErrorHandler: ErrorHandler;
   let serverCalledProcessExit = false;
+  const textlintConfig = readConfig();
   const clientOptions: LanguageClientOptions = {
-    documentSelector: getConfig<string[]>("languages").map((id) => {
+    documentSelector: textlintConfig.languages.map((id) => {
       return { language: id, scheme: "file" };
     }),
     diagnosticCollectionName: "textlint",
@@ -126,15 +136,7 @@ function newClient(context: ExtensionContext): LanguageClient {
         workspace.createFileSystemWatcher("**/.textlintignore"),
       ],
     },
-    initializationOptions: () => {
-      return {
-        configPath: getConfig("configPath"),
-        ignorePath: getConfig("ignorePath"),
-        nodePath: getConfig("nodePath"),
-        run: getConfig("run"),
-        trace: getConfig("trace", "off"),
-      };
-    },
+    initializationOptions: readInitializationOptions,
     initializationFailedHandler: (error) => {
       client.error("Server initialization failed.", error);
       return false;
@@ -231,22 +233,21 @@ function toQuickPickItems(folders: WorkspaceFolder[]): ({ folder: WorkspaceFolde
   });
 }
 
-let autoFixOnSave: Disposable;
+let autoFixOnSave: Disposable | undefined;
 
 function configureAutoFixOnSave(client: LanguageClient) {
-  const auto = getConfig("autoFixOnSave", false);
+  const { autoFixOnSave: autoFixEnabled, languages, targetPath } = readConfig();
   disposeAutoFixOnSave();
 
-  if (auto) {
-    const languages = new Set(getConfig<string[]>("languages", []));
+  if (autoFixEnabled) {
+    const supportedLanguages = new Set(languages);
     autoFixOnSave = workspace.onWillSaveTextDocument((event) => {
       const doc = event.document;
-      const target = getConfig("targetPath", null);
       if (
-        languages.has(doc.languageId) &&
+        supportedLanguages.has(doc.languageId) &&
         event.reason !== TextDocumentSaveReason.AfterDelay &&
-        (target === "" ||
-          minimatch(workspace.asRelativePath(doc.uri), target, {
+        (targetPath === "" ||
+          minimatch(workspace.asRelativePath(doc.uri), targetPath, {
             matchBase: true,
           }))
       ) {
@@ -296,9 +297,15 @@ function makeApplyFixFn(client: LanguageClient) {
   };
 }
 
-const allFixesCompletes = [];
+const allFixesCompletes: ((te: TextEditor, edits: TextEdit[], ok: boolean) => void)[] = [];
 function onAllFixesComplete(fn: (te: TextEditor, edits: TextEdit[], ok: boolean) => void) {
   allFixesCompletes.push(fn);
+  return new Disposable(() => {
+    const index = allFixesCompletes.indexOf(fn);
+    if (index >= 0) {
+      allFixesCompletes.splice(index, 1);
+    }
+  });
 }
 
 async function applyTextEdits(
@@ -322,6 +329,7 @@ async function applyTextEdits(
           },
           (errors) => {
             client.error(errors.message, errors.stack);
+            return false;
           }
         );
     } else {
@@ -329,18 +337,30 @@ async function applyTextEdits(
       return true;
     }
   }
+  return false;
 }
 
 export function deactivate() {
   disposeAutoFixOnSave();
 }
 
-function config() {
-  return workspace.getConfiguration("textlint");
+function readConfig(): ExtensionSettings {
+  const config = workspace.getConfiguration("textlint");
+  return {
+    languages: config.get("languages", defaultConfig.languages),
+    configPath: config.get("configPath", defaultConfig.configPath),
+    ignorePath: config.get("ignorePath", defaultConfig.ignorePath),
+    nodePath: config.get("nodePath", defaultConfig.nodePath),
+    run: config.get("run", defaultConfig.run),
+    trace: config.get("trace", defaultConfig.trace),
+    autoFixOnSave: config.get("autoFixOnSave", defaultConfig.autoFixOnSave),
+    targetPath: config.get("targetPath", defaultConfig.targetPath),
+  };
 }
 
-function getConfig<T>(section: string, defaults?: T) {
-  return config().get<T>(section, defaults);
+function readInitializationOptions(): ServerInitializationOptions {
+  const { configPath, ignorePath, nodePath, run, trace, targetPath } = readConfig();
+  return { configPath, ignorePath, nodePath, run, trace, targetPath };
 }
 
 function to(status: StatusNotification.Status): Status {
