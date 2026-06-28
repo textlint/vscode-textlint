@@ -21,8 +21,8 @@
     "clean": "rimraf dist out",
     "tsc": "tsc -p ./",
     "type-check": "tsc --noEmit",
-    "build": "webpack --mode production",
-    "watch": "webpack --mode development --watch",
+    "build": "rspack build --mode production",
+    "watch": "rspack build --mode development --watch",
     "pretest": "rimraf dist && npm run type-check && npm run build",
     "test": "node ./src/test/runTest.ts",
     "format": "prettier --check . --config package.json --ignore-path .prettierignore",
@@ -143,6 +143,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@rspack/cli": "^2.1.1",
+    "@rspack/core": "^2.1.1",
     "@textlint/types": "^15.7.1",
     "@types/glob": "^7.2.0",
     "@types/node": "^22.20.0",
@@ -157,11 +159,8 @@
     "prettier": "^2.4.1",
     "rimraf": "^3.0.2",
     "sort-package-json": "^1.52.0",
-    "ts-loader": "^9.2.6",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.62.0",
-    "webpack": "^5.61.0",
-    "webpack-cli": "^4.9.1"
+    "typescript-eslint": "^8.62.0"
   },
   "engines": {
     "node": ">=26.0.0",
