@@ -38,7 +38,8 @@ import {
 } from "../shared/types";
 
 import { TextlintFixRepository, AutoFix } from "./autofix";
-import type { createLinter, TextLintMessage } from "./textlint";
+import type { createLinter } from "./textlint";
+import type { TextlintMessage } from "@textlint/types";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -340,7 +341,7 @@ function toDiagnosticSeverity(severity?: number): DiagnosticSeverity {
   return DiagnosticSeverity.Information;
 }
 
-function toDiagnostic(message: TextLintMessage): [TextLintMessage, Diagnostic] {
+function toDiagnostic(message: TextlintMessage): [TextlintMessage, Diagnostic] {
   const pos_start = Position.create(Math.max(0, message.line - 1), Math.max(0, message.column - 1));
   let offset = 0;
   if (message.message.indexOf("->") >= 0) {

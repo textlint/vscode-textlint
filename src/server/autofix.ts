@@ -1,16 +1,17 @@
 import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { TextLintFixCommand, TextLintMessage } from "./textlint";
+import type { TextlintMessage, TextlintMessageFixCommand } from "@textlint/types";
+
 export interface AutoFix {
   version: number;
   ruleId: string;
-  fix: TextLintFixCommand;
+  fix: TextlintMessageFixCommand;
 }
 
 export class TextlintFixRepository {
   map: Map<string, AutoFix> = new Map();
 
-  register(doc: TextDocument, diag: Diagnostic, msg: TextLintMessage) {
+  register(doc: TextDocument, diag: Diagnostic, msg: TextlintMessage) {
     if (msg.fix && msg.ruleId) {
       const fix = {
         version: doc.version,
