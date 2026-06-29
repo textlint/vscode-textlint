@@ -23,7 +23,6 @@ import { URI, Utils as URIUtils } from "vscode-uri";
 import * as os from "os";
 import * as fs from "fs";
 import * as path from "path";
-import * as glob from "glob";
 import minimatch from "minimatch";
 
 import {
@@ -250,7 +249,7 @@ async function validateMany(textDocuments: TextDocument[]) {
 }
 
 function candidates(root: string) {
-  return () => glob.sync(`${root}/.textlintr{c.js,c.yaml,c.yml,c,c.json}`);
+  return () => fs.globSync(`${root}/.textlintr{c.js,c.yaml,c.yml,c,c.json}`);
 }
 
 function isTarget(root: string, file: string): boolean {
