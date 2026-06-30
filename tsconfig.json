@@ -5,11 +5,11 @@
     "strict": true,
     "esModuleInterop": true,
     "outDir": "out",
-    "rootDir": "src",
-    "lib": ["ES2022"],
+    "rootDir": ".",
+    "lib": ["ES2022", "DOM"],
     "types": ["node", "vscode"],
     "sourceMap": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "rspack.config.ts"],
   "exclude": ["node_modules", ".vscode-test", "dist", "out"]
 }
