@@ -164,7 +164,7 @@
     "webpack-cli": "^4.9.1"
   },
   "engines": {
-    "node": ">=26.0.0",
+    "node": ">=24.0.0 <25.0.0",
     "vscode": "^1.74.0"
   },
   "icon": "textlint-icon_128x128.png",
