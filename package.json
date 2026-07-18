@@ -128,18 +128,15 @@
     }
   },
   "activationEvents": [
-    "onLanguage",
-    "onCommand:textlint.showOutputChannel",
-    "onCommand:textlint.createConfig",
-    "onCommand:textlint.executeAutofix"
+    "onLanguage"
   ],
   "dependencies": {
     "glob": "^7.2.0",
     "minimatch": "^3.0.4",
-    "vscode-languageclient": "^7.0.0",
-    "vscode-languageserver": "^7.0.0",
-    "vscode-languageserver-textdocument": "1.0.2",
-    "vscode-uri": "^3.0.2"
+    "vscode-languageclient": "^10.1.0",
+    "vscode-languageserver": "^10.1.0",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vscode-uri": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -148,9 +145,9 @@
     "@textlint/types": "^15.7.1",
     "@types/glob": "^7.2.0",
     "@types/node": "^22.20.0",
-    "@types/vscode": "^1.74.0",
-    "@vscode/test-electron": "^2.4.1",
-    "@vscode/vsce": "^3.2.2",
+    "@types/vscode": "^1.91.0",
+    "@vscode/test-electron": "^3.0.0",
+    "@vscode/vsce": "^3.9.2",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "merge-options": "^3.0.4",
@@ -164,7 +161,7 @@
   },
   "engines": {
     "node": ">=26.0.0",
-    "vscode": "^1.74.0"
+    "vscode": "^1.91.0"
   },
   "icon": "textlint-icon_128x128.png",
   "galleryBanner": {

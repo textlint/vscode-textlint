@@ -123,13 +123,7 @@ async function setupServerFixture(context: TestContext): Promise<{
   });
 
   // Restart language server
-  if (typeof internals.client.stop === "function") {
-    await internals.client.stop();
-  }
-  if (typeof internals.client.start === "function") {
-    await internals.client.start();
-  }
-  await internals.client.onReady();
+  await internals.client.restart();
 
   // Prepare test file
   await fs.cp(sourceFile, testFile);

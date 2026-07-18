@@ -16,7 +16,6 @@ import {
   TextEdit,
   State as ServerState,
   ErrorHandler,
-  ErrorAction,
   CloseAction,
   RevealOutputChannelOn,
 } from "vscode-languageclient";
@@ -54,52 +53,51 @@ export interface ExtensionInternal {
   onAllFixesComplete(fn: (te: TextEditor, edits: TextEdit[], ok: boolean) => void): Disposable;
 }
 
-export function activate(context: ExtensionContext): ExtensionInternal {
+export async function activate(context: ExtensionContext): Promise<ExtensionInternal> {
   const client = newClient(context);
   const statusBar = new StatusBar(readConfig().languages);
-  client.onReady().then(() => {
-    client.onDidChangeState((event) => {
-      statusBar.serverRunning = event.newState === ServerState.Running;
-    });
-    client.onNotification(StatusNotification.type, (p: StatusNotification.StatusParams) => {
-      statusBar.status = to(p.status);
-      if (p.message || p.cause) {
-        statusBar.status.log(client, p.message ?? "", p.cause);
-      }
-    });
-    client.onNotification(NoConfigNotification.type, (p) => {
-      statusBar.status = Status.WARN;
-      statusBar.status.log(
-        client,
-        `No textlint configuration (e.g .textlintrc) found in ${p.workspaceFolder} .
+  client.onDidChangeState((event) => {
+    statusBar.serverRunning = event.newState === ServerState.Running;
+  });
+  client.onNotification(StatusNotification.type, (p: StatusNotification.StatusParams) => {
+    statusBar.status = to(p.status);
+    if (p.message || p.cause) {
+      statusBar.status.log(client, p.message ?? "", p.cause);
+    }
+  });
+  client.onNotification(NoConfigNotification.type, (p) => {
+    statusBar.status = Status.WARN;
+    statusBar.status.log(
+      client,
+      `No textlint configuration (e.g .textlintrc) found in ${p.workspaceFolder} .
 File will not be validated. Consider running the 'Create .textlintrc file' command.`
-      );
-    });
-    client.onNotification(NoLibraryNotification.type, (p) => {
-      statusBar.status = Status.WARN;
-      statusBar.status.log(
-        client,
-        `Failed to load the textlint library in ${p.workspaceFolder} .
+    );
+  });
+  client.onNotification(NoLibraryNotification.type, (p) => {
+    statusBar.status = Status.WARN;
+    statusBar.status.log(
+      client,
+      `Failed to load the textlint library in ${p.workspaceFolder} .
 To use textlint in this workspace please install textlint using 'npm install textlint' or globally using 'npm install -g textlint'.
 You need to reopen the workspace after installing textlint.`
-      );
-    });
-    client.onNotification(StartProgressNotification.type, () => statusBar.startProgress());
-    client.onNotification(StopProgressNotification.type, () => statusBar.stopProgress());
-
-    client.onNotification(LogTraceNotification.type, (p) => client.info(p.message, p.verbose));
-    const changeConfigHandler = () => configureAutoFixOnSave(client);
-    workspace.onDidChangeConfiguration(changeConfigHandler);
-    changeConfigHandler();
+    );
   });
+  client.onNotification(StartProgressNotification.type, () => statusBar.startProgress());
+  client.onNotification(StopProgressNotification.type, () => statusBar.stopProgress());
+
+  client.onNotification(LogTraceNotification.type, (p) => client.info(p.message, p.verbose));
+  const changeConfigHandler = () => configureAutoFixOnSave(client);
+  workspace.onDidChangeConfiguration(changeConfigHandler);
+  changeConfigHandler();
   context.subscriptions.push(
     commands.registerCommand("textlint.createConfig", createConfig),
     commands.registerCommand("textlint.applyTextEdits", makeApplyFixFn(client)),
     commands.registerCommand("textlint.executeAutofix", makeAutoFixFn(client)),
     commands.registerCommand("textlint.showOutputChannel", () => client.outputChannel.show()),
-    client.start(),
+    client,
     statusBar
   );
+  await client.start();
   // for testing purpose
   return {
     client,
@@ -142,12 +140,12 @@ function newClient(context: ExtensionContext): LanguageClient {
       return false;
     },
     errorHandler: {
-      error: (error, message, count): ErrorAction => {
+      error: (error, message, count) => {
         return defaultErrorHandler.error(error, message, count);
       },
-      closed: (): CloseAction => {
+      closed: () => {
         if (serverCalledProcessExit) {
-          return CloseAction.DoNotRestart;
+          return { action: CloseAction.DoNotRestart };
         }
         return defaultErrorHandler.closed();
       },
@@ -156,10 +154,8 @@ function newClient(context: ExtensionContext): LanguageClient {
 
   const client = new LanguageClient("textlint", serverOptions, clientOptions);
   defaultErrorHandler = client.createDefaultErrorHandler();
-  client.onReady().then(() => {
-    client.onNotification(ExitNotification.type, () => {
-      serverCalledProcessExit = true;
-    });
+  client.onNotification(ExitNotification.type, () => {
+    serverCalledProcessExit = true;
   });
   return client;
 }
@@ -254,7 +250,7 @@ function configureAutoFixOnSave(client: LanguageClient) {
         const version = doc.version;
         const uri: string = doc.uri.toString();
         event.waitUntil(
-          client.sendRequest(AllFixesRequest.type, { textDocument: { uri } }).then((result: AllFixesRequest.Result) => {
+          client.sendRequest(AllFixesRequest.type, { textDocument: { uri } }).then((result) => {
             return result && result.documentVersion === version
               ? client.protocol2CodeConverter.asTextEdits(result.edits)
               : [];
@@ -278,7 +274,7 @@ function makeAutoFixFn(client: LanguageClient) {
     if (textEditor) {
       const uri: string = textEditor.document.uri.toString();
       client.sendRequest(AllFixesRequest.type, { textDocument: { uri } }).then(
-        async (result: AllFixesRequest.Result) => {
+        async (result) => {
           if (result) {
             await applyTextEdits(client, uri, result.documentVersion, result.edits);
           }

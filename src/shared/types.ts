@@ -74,7 +74,7 @@ export namespace AllFixesRequest {
     edits: TextEdit[];
   }
 
-  export const type = new RequestType<Params, Result, void>("textDocument/textlint/allFixes");
+  export const type = new RequestType<Params, Result | null, void>("textDocument/textlint/allFixes");
 }
 
 export namespace StartProgressNotification {

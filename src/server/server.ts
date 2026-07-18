@@ -411,6 +411,7 @@ connection.onRequest(AllFixesRequest.type, (params: AllFixesRequest.Params) => {
       edits: repo.separatedValues().map((af) => toTextEdit(textDocument, af)),
     };
   }
+  return null;
 });
 
 let inProgress = 0;
