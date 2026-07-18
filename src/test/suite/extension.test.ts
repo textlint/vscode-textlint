@@ -157,7 +157,6 @@ checkedTest("Extension tests > Commands registration", async () => {
 checkedTest("Extension tests > Server integration > Linting", async (context) => {
   const { testFile, disposables } = await setupServerFixture(context);
   const fileUri = Uri.file(testFile);
-  let diagnosticsReceived = false;
   const diagnostics: Diagnostic[] = [];
 
   // Set up diagnostics notification listener
@@ -176,7 +175,6 @@ checkedTest("Extension tests > Server integration > Linting", async (context) =>
         const vscDiagnostic = internals.client.protocol2CodeConverter.asDiagnostic(diag);
         diagnostics.push(vscDiagnostic);
       });
-      diagnosticsReceived = true;
     }
   });
 
@@ -196,9 +194,12 @@ checkedTest("Extension tests > Server integration > Linting", async (context) =>
   // Show output channel
   await commands.executeCommand("textlint.showOutputChannel");
 
-  // Wait for diagnostics
-  const received = await waitForCondition(() => diagnosticsReceived);
-  assert.ok(received, "Should receive diagnostics within 10 seconds");
+  // Wait for diagnostics of the edited content; the didOpen lint publishes
+  // diagnostics for the pre-edit content first
+  const received = await waitForCondition(() =>
+    diagnostics.some((diag) => diag.range.start.line === 0 && diag.range.start.character === 1)
+  );
+  assert.ok(received, "Should receive diagnostics for the edited document within 10 seconds");
 
   // Expected diagnostics
   const expectedDiagnostics = [
