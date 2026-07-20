@@ -1,0 +1,32 @@
+name: Resolve Marketplace identity
+
+on:
+  push:
+    branches:
+      - feature/publish-extensions-using-microsoft-entra-id-based-authentication
+
+jobs:
+  resolve:
+    name: Resolve identity
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Azure login using GitHub OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve Marketplace identity resource ID
+        run: |
+          identity_id="$(az rest \
+            --url 'https://app.vssps.visualstudio.com/_apis/profile/profiles/me' \
+            --resource '499b84ac-1321-427f-aa17-267ca6975798' \
+            --query id \
+            --output tsv)"
+          test -n "$identity_id"
+          echo "::notice title=Marketplace identity resource ID::$identity_id"
