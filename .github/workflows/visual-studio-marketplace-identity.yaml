@@ -1,13 +1,16 @@
-name: Resolve Marketplace identity
+name: Resolve Visual Studio Marketplace identity
 
 on:
-  push:
-    branches:
-      - feature/publish-extensions-using-microsoft-entra-id-based-authentication
+  workflow_dispatch:
+    inputs:
+      publisher_id:
+        description: Visual Studio Marketplace publisher ID to verify
+        required: true
+        type: string
 
 jobs:
-  resolve:
-    name: Resolve identity
+  inspect:
+    name: Resolve and verify identity
     runs-on: ubuntu-24.04
     environment: release
     permissions:
@@ -39,4 +42,8 @@ jobs:
           echo "::notice title=Marketplace identity resource ID::$identity_id"
 
       - name: Verify Marketplace access
-        run: npx vsce verify-pat 3w36zj6 --azure-credential
+        env:
+          VSCODE_MARKETPLACE_PUBLISHER_ID: ${{ inputs.publisher_id }}
+        run: |
+          test -n "$VSCODE_MARKETPLACE_PUBLISHER_ID"
+          npx vsce verify-pat "$VSCODE_MARKETPLACE_PUBLISHER_ID" --azure-credential
