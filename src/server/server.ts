@@ -23,6 +23,7 @@ import { URI, Utils as URIUtils } from "vscode-uri";
 import * as os from "os";
 import * as fs from "fs";
 import * as path from "path";
+import { createRequire } from "node:module";
 import * as glob from "glob";
 import minimatch from "minimatch";
 
@@ -149,12 +150,11 @@ async function resolveModule(root: string) {
   }
 }
 
-declare const __webpack_require__: typeof require;
-declare const __non_webpack_require__: typeof require;
+const runtimeRequire = createRequire(import.meta.url);
+
 function loadModule(moduleName: string) {
-  const r = typeof __webpack_require__ === "function" ? __non_webpack_require__ : require;
   try {
-    return r(moduleName);
+    return runtimeRequire(moduleName);
   } catch (err) {
     TRACE("load failed", err);
   }

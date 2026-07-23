@@ -1,19 +1,23 @@
 import { defineConfig } from "@rspack/cli";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
+
+const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const config = defineConfig({
   target: "node",
   output: {
-    path: path.resolve(__dirname, "dist"),
+    path: path.resolve(rootDirectory, "dist"),
+    module: true,
     library: {
-      type: "commonjs",
+      type: "module",
     },
   },
   stats: {
     errorDetails: true,
   },
   devtool: "source-map",
-  externalsType: "commonjs",
+  externalsType: "module-import",
   externals: [
     {
       vscode: "vscode",
@@ -21,8 +25,7 @@ const config = defineConfig({
     },
   ],
   resolve: {
-    extensions: [".ts", ".js"],
-    modules: [path.resolve(__dirname, "node_modules"), "node_modules"],
+    extensions: [".ts", "..."],
   },
   module: {
     rules: [
