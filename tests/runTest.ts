@@ -6,7 +6,7 @@ import { runTests } from "@vscode/test-electron";
 async function main() {
   try {
     const extensionDevelopmentPath = process.cwd();
-    const extensionTestsPath = path.resolve(extensionDevelopmentPath, "src/test/suite/index.ts");
+    const extensionTestsPath = path.resolve(extensionDevelopmentPath, "tests/suite/index.ts");
     const workspaceFolder = path.resolve(extensionDevelopmentPath, "tests/fixtures/single-root-workspace");
 
     try {

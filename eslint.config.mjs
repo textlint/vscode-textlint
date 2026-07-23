@@ -12,7 +12,7 @@ const gitignorePath = fileURLToPath(new URL(".gitignore", import.meta.url));
 export default defineConfig([
   includeIgnoreFile(gitignorePath, { gitignoreResolution: true }),
   {
-    files: ["src/**/*.{js,ts}"],
+    files: ["src/**/*.{js,ts}", "tests/**/*.ts"],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       parserOptions: {
@@ -39,7 +39,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/test/**/*.ts"],
+    files: ["tests/**/*.ts"],
     rules: {
       "no-console": ["error", { allow: ["error"] }],
     },

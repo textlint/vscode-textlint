@@ -10,6 +10,6 @@
     "types": ["node", "vscode"],
     "sourceMap": true
   },
-  "include": ["src/**/*.ts", "rspack.config.ts"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "rspack.config.ts"],
   "exclude": ["node_modules", ".vscode-test", "dist", "out"]
 }

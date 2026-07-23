@@ -24,7 +24,7 @@
     "build": "rspack build --mode production",
     "watch": "rspack build --mode development --watch",
     "pretest": "rimraf dist && npm run type-check && npm run build",
-    "test": "node ./src/test/runTest.ts",
+    "test": "node ./tests/runTest.ts",
     "format": "prettier --check . --config package.json --ignore-path .prettierignore",
     "format:write": "prettier --write . --config package.json --ignore-path .prettierignore",
     "lint": "eslint",
