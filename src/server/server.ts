@@ -38,7 +38,7 @@ import {
 } from "../shared/types";
 
 import { TextlintFixRepository, AutoFix } from "./autofix";
-import type { createLinter } from "./textlint";
+import type { createLinter } from "textlint";
 import type { TextlintMessage } from "@textlint/types";
 
 const connection = createConnection(ProposedFeatures.all);
@@ -47,7 +47,7 @@ let trace: number;
 documents.listen(connection);
 
 type WorkspaceLinter = {
-  linter: ReturnType<createLinter>;
+  linter: ReturnType<typeof createLinter>;
   availableExtensions: string[];
 };
 
