@@ -2,7 +2,18 @@ import * as assert from "assert";
 import * as fs from "node:fs/promises";
 import * as path from "path";
 
-import { workspace, window, commands, extensions, Uri, Position, WorkspaceEdit, DiagnosticSeverity } from "vscode";
+import {
+  workspace,
+  window,
+  commands,
+  extensions,
+  Uri,
+  Position,
+  WorkspaceEdit,
+  DiagnosticSeverity,
+  ConfigurationTarget,
+  languages,
+} from "vscode";
 import type { Diagnostic, Disposable, Extension } from "vscode";
 import { NotificationType } from "vscode-jsonrpc";
 import type { Diagnostic as LspDiagnostic } from "vscode-languageserver-types";
@@ -15,6 +26,7 @@ import type { ExtensionInternal } from "../../src/client/extension";
 const failures: unknown[] = [];
 const testPromises: Promise<void>[] = [];
 const TEST_TIMEOUT = 90000;
+const DIAGNOSTICS_TIMEOUT = 10000;
 
 interface PublishDiagnosticsParams {
   uri: string;
@@ -67,7 +79,6 @@ const waitForCondition = async (condition: () => boolean, maxAttempts = 10, inte
 };
 
 async function setupExtension(): Promise<void> {
-  await commands.executeCommand("textlint.showOutputChannel");
   const ext = extensions.getExtension("3w36zj6.textlint");
   if (!ext) {
     throw new Error("Extension not found");
@@ -90,7 +101,10 @@ function getWorkspaceRoot(): string {
   return folders[0].uri.fsPath;
 }
 
-async function setupServerFixture(context: TestContext): Promise<{
+async function setupServerFixture(
+  context: TestContext,
+  testFileName = "testtest2.txt"
+): Promise<{
   testFile: string;
   disposables: Disposable[];
 }> {
@@ -99,17 +113,17 @@ async function setupServerFixture(context: TestContext): Promise<{
   // Test file paths
   const rootPath = getWorkspaceRoot();
   const sourceFile = path.join(rootPath, "testtest.txt");
-  const testFile = path.join(rootPath, "testtest2.txt");
+  const testFile = path.join(rootPath, testFileName);
 
   // Event listener disposables
   const disposables: Disposable[] = [];
 
   context.after(async () => {
-    // Delete test file
-    await fs.rm(testFile, { force: true });
-
     // Close editors
     await commands.executeCommand("workbench.action.closeAllEditors");
+
+    // Delete test file
+    await fs.rm(testFile, { force: true });
 
     // Dispose event listeners
     for (const disposable of disposables) {
@@ -121,9 +135,6 @@ async function setupServerFixture(context: TestContext): Promise<{
     // Clear array
     disposables.length = 0;
   });
-
-  // Restart language server
-  await internals.client.restart();
 
   // Prepare test file
   await fs.cp(sourceFile, testFile);
@@ -152,6 +163,52 @@ checkedTest("Extension tests > Commands registration", async () => {
   ];
 
   assert.deepStrictEqual(textlintCommands.sort(), expectedCommands.sort(), "Commands should match expected values");
+});
+
+checkedTest("Extension tests > Server integration > Target path matching", async (context) => {
+  const { testFile } = await setupServerFixture(context, "README.md");
+  const fileUri = Uri.file(testFile);
+  const config = workspace.getConfiguration("textlint");
+  const originalTargetPath = config.inspect<string>("targetPath")?.workspaceValue;
+  const fileUriString = fileUri.toString();
+  const updateTargetPath = (targetPath: string, shouldLint: boolean) => {
+    return new Promise<void>((resolve, reject) => {
+      const listener = languages.onDidChangeDiagnostics((event) => {
+        const changed = event.uris.some((uri) => uri.toString() === fileUriString);
+        const hasDiagnostics = languages.getDiagnostics(fileUri).length > 0;
+        if (changed && hasDiagnostics === shouldLint) {
+          listener.dispose();
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+      const timeout = setTimeout(() => {
+        listener.dispose();
+        reject(new Error(`"${targetPath}" did not ${shouldLint ? "lint" : "exclude"} README.md`));
+      }, DIAGNOSTICS_TIMEOUT);
+      config.update("targetPath", targetPath, ConfigurationTarget.Workspace).then(undefined, (error) => {
+        listener.dispose();
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+  };
+
+  context.after(async () => {
+    await config.update("targetPath", originalTargetPath, ConfigurationTarget.Workspace);
+  });
+
+  const doc = await workspace.openTextDocument(testFile);
+  await window.showTextDocument(doc);
+
+  for (const [targetPath, shouldLint] of [
+    ["*.txt", false],
+    ["README.md", true],
+    ["*", true],
+    ["**/*", true],
+  ] as const) {
+    await updateTargetPath(targetPath, shouldLint);
+  }
 });
 
 checkedTest("Extension tests > Server integration > Linting", async (context) => {
@@ -190,9 +247,6 @@ checkedTest("Extension tests > Server integration > Linting", async (context) =>
   edit.insert(fileUri, new Position(0, 0), " ");
   await workspace.applyEdit(edit);
   await doc.save();
-
-  // Show output channel
-  await commands.executeCommand("textlint.showOutputChannel");
 
   // Wait for diagnostics of the edited content; the didOpen lint publishes
   // diagnostics for the pre-edit content first
