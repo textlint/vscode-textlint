@@ -1,0 +1,49 @@
+name: Resolve Visual Studio Marketplace identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      publisher_id:
+        description: Visual Studio Marketplace publisher ID to verify
+        required: true
+        type: string
+
+jobs:
+  inspect:
+    name: Resolve and verify identity
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Setup Node.js
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version-file: .tool-versions
+      - name: Install dependencies
+        run: npm ci
+      - name: Azure login using GitHub OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve Marketplace identity resource ID
+        run: |
+          identity_id="$(az rest \
+            --url 'https://app.vssps.visualstudio.com/_apis/profile/profiles/me' \
+            --resource '499b84ac-1321-427f-aa17-267ca6975798' \
+            --query id \
+            --output tsv)"
+          test -n "$identity_id"
+          echo "::notice title=Marketplace identity resource ID::$identity_id"
+
+      - name: Verify Marketplace access
+        env:
+          VSCODE_MARKETPLACE_PUBLISHER_ID: ${{ inputs.publisher_id }}
+        run: |
+          test -n "$VSCODE_MARKETPLACE_PUBLISHER_ID"
+          npx vsce verify-pat "$VSCODE_MARKETPLACE_PUBLISHER_ID" --azure-credential

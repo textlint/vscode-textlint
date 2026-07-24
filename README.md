@@ -53,6 +53,16 @@ This extension contributes the following commands to the Command palette:
 
 ## Release notes
 
+### 0.13.0
+
+- Dropped support for textlint v12, requiring textlint v13 or later ([#39](https://github.com/textlint/vscode-textlint/pull/39))
+- Required VS Code 1.91 or later
+- Added language associations for `.textlintrc.json` and `.textlintignore` files ([#28](https://github.com/textlint/vscode-textlint/pull/28))
+- Fixed a server crash when no workspace folder is open ([#33](https://github.com/textlint/vscode-textlint/pull/33))
+  - Thanks to @314systems
+- Removed redundant rule IDs from diagnostic messages ([#32](https://github.com/textlint/vscode-textlint/pull/32))
+  - Thanks to @314systems
+
 ### 0.12.0
 
 - Changed notification level from `ERROR` to `WARN` when executable file is not found ([#6](https://github.com/textlint/vscode-textlint/pull/6))

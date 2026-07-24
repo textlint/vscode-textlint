@@ -10,7 +10,7 @@ import type { TextEdit } from "vscode-languageclient/node";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
 
-import type { ExtensionInternal } from "../../client/extension";
+import type { ExtensionInternal } from "../../src/client/extension";
 
 const failures: unknown[] = [];
 const testPromises: Promise<void>[] = [];
