@@ -197,7 +197,7 @@ checkedTest("Extension tests > Server integration > Linting", async (context) =>
   // Wait for diagnostics of the edited content; the didOpen lint publishes
   // diagnostics for the pre-edit content first
   const received = await waitForCondition(() =>
-    diagnostics.some((diag) => diag.range.start.line === 0 && diag.range.start.character === 1)
+    diagnostics.some((diag) => diag.range.start.line === 0 && diag.range.start.character === 1),
   );
   assert.ok(received, "Should receive diagnostics for the edited document within 10 seconds");
 
@@ -239,7 +239,7 @@ checkedTest("Extension tests > Server integration > Linting", async (context) =>
   assert.strictEqual(
     diagnostics.length,
     expectedDiagnostics.length,
-    "Number of diagnostics should match expected count"
+    "Number of diagnostics should match expected count",
   );
 
   // Verify each diagnostic
@@ -266,7 +266,7 @@ checkedTest("Extension tests > Server integration > Linting", async (context) =>
         endLine: expected.range.end.line,
         endChar: expected.range.end.character,
       },
-      `Diagnostic[${i}] range should match expected values`
+      `Diagnostic[${i}] range should match expected values`,
     );
   }
 });
@@ -331,22 +331,22 @@ checkedTest("Extension tests > Server integration > Autofix", async (context) =>
     assert.strictEqual(
       actual.range.start.line,
       expected.range.start.line,
-      `Edit[${i}] range.start.line should match expected value`
+      `Edit[${i}] range.start.line should match expected value`,
     );
     assert.strictEqual(
       actual.range.start.character,
       expected.range.start.character,
-      `Edit[${i}] range.start.character should match expected value`
+      `Edit[${i}] range.start.character should match expected value`,
     );
     assert.strictEqual(
       actual.range.end.line,
       expected.range.end.line,
-      `Edit[${i}] range.end.line should match expected value`
+      `Edit[${i}] range.end.line should match expected value`,
     );
     assert.strictEqual(
       actual.range.end.character,
       expected.range.end.character,
-      `Edit[${i}] range.end.character should match expected value`
+      `Edit[${i}] range.end.character should match expected value`,
     );
   }
 });

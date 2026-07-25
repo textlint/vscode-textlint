@@ -1,4 +1,4 @@
-import minimatch from "minimatch";
+import { minimatch } from "minimatch";
 
 import {
   workspace,
@@ -70,7 +70,7 @@ export async function activate(context: ExtensionContext): Promise<ExtensionInte
     statusBar.status.log(
       client,
       `No textlint configuration (e.g .textlintrc) found in ${p.workspaceFolder} .
-File will not be validated. Consider running the 'Create .textlintrc file' command.`
+File will not be validated. Consider running the 'Create .textlintrc file' command.`,
     );
   });
   client.onNotification(NoLibraryNotification.type, (p) => {
@@ -79,7 +79,7 @@ File will not be validated. Consider running the 'Create .textlintrc file' comma
       client,
       `Failed to load the textlint library in ${p.workspaceFolder} .
 To use textlint in this workspace please install textlint using 'npm install textlint' or globally using 'npm install -g textlint'.
-You need to reopen the workspace after installing textlint.`
+You need to reopen the workspace after installing textlint.`,
     );
   });
   client.onNotification(StartProgressNotification.type, () => statusBar.startProgress());
@@ -95,7 +95,7 @@ You need to reopen the workspace after installing textlint.`
     commands.registerCommand("textlint.executeAutofix", makeAutoFixFn(client)),
     commands.registerCommand("textlint.showOutputChannel", () => client.outputChannel.show()),
     client,
-    statusBar
+    statusBar,
   );
   await client.start();
   // for testing purpose
@@ -164,7 +164,7 @@ async function createConfig() {
   const folders = workspace.workspaceFolders;
   if (!folders) {
     await window.showErrorMessage(
-      "An textlint configuration can only be generated if VS Code is opened on a workspace folder."
+      "An textlint configuration can only be generated if VS Code is opened on a workspace folder.",
     );
     return;
   }
@@ -190,7 +190,7 @@ async function filterNoConfigFolders(folders: readonly WorkspaceFolder[]): Promi
   const result = [];
   outer: for (const folder of folders) {
     const candidates = ["", ".js", ".yaml", ".yml", ".json"].map((ext) =>
-      URIUtils.joinPath(folder.uri, ".textlintrc" + ext)
+      URIUtils.joinPath(folder.uri, ".textlintrc" + ext),
     );
     for (const configPath of candidates) {
       try {
@@ -213,8 +213,8 @@ async function emitConfig(folder: WorkspaceFolder) {
   "filters": {},
   "rules": {}
 }`,
-        "utf8"
-      )
+        "utf8",
+      ),
     );
   }
 }
@@ -254,7 +254,7 @@ function configureAutoFixOnSave(client: LanguageClient) {
             return result && result.documentVersion === version
               ? client.protocol2CodeConverter.asTextEdits(result.edits)
               : [];
-          })
+          }),
         );
       }
     });
@@ -281,7 +281,7 @@ function makeAutoFixFn(client: LanguageClient) {
         },
         (error) => {
           client.error("Failed to apply textlint fixes to the document.", error);
-        }
+        },
       );
     }
   };
@@ -308,7 +308,7 @@ async function applyTextEdits(
   client: LanguageClient,
   uri: string,
   documentVersion: number,
-  edits: TextEdit[]
+  edits: TextEdit[],
 ): Promise<boolean> {
   const textEditor = window.activeTextEditor;
   if (textEditor && textEditor.document.uri.toString() === uri) {
@@ -326,7 +326,7 @@ async function applyTextEdits(
           (errors) => {
             client.error(errors.message, errors.stack);
             return false;
-          }
+          },
         );
     } else {
       window.showInformationMessage(`textlint fixes are outdated and can't be applied to ${uri}`);

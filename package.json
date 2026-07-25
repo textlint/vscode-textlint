@@ -19,22 +19,22 @@
   "type": "module",
   "main": "./dist/extension.js",
   "scripts": {
-    "clean": "rimraf dist out",
-    "tsc": "tsc -p ./",
-    "type-check": "tsc --noEmit",
     "build": "rspack build --mode production",
-    "watch": "rspack build --mode development --watch",
-    "pretest": "rimraf dist && npm run type-check && npm run build",
-    "test": "node ./tests/runTest.ts",
-    "format": "prettier --check . --config package.json --ignore-path .prettierignore",
-    "format:write": "prettier --write . --config package.json --ignore-path .prettierignore",
+    "clean": "rimraf dist out",
+    "fix": "run-s format:write lint:fix",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "fix": "run-s format:write lint:fix",
-    "sort": "sort-package-json",
-    "upgrade": "ncu -u",
     "prepackage": "npm run build",
-    "package": "vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies",
+    "sort": "sort-package-json",
+    "pretest": "rimraf dist && npm run type-check && npm run build",
+    "test": "node ./tests/runTest.ts",
+    "tsc": "tsc -p ./",
+    "type-check": "tsc --noEmit",
+    "upgrade": "ncu -u",
+    "watch": "rspack build --mode development --watch"
   },
   "contributes": {
     "commands": [
@@ -54,12 +54,6 @@
         "command": "textlint.showOutputChannel"
       }
     ],
-    "configurationDefaults": {
-      "files.associations": {
-        ".textlintrc.json": "jsonc",
-        ".textlintignore": "ignore"
-      }
-    },
     "configuration": {
       "type": "object",
       "title": "textlint",
@@ -126,13 +120,19 @@
           "description": "Target files path that runs lint."
         }
       }
+    },
+    "configurationDefaults": {
+      "files.associations": {
+        ".textlintrc.json": "jsonc",
+        ".textlintignore": "ignore"
+      }
     }
   },
   "activationEvents": [
     "onLanguage"
   ],
   "dependencies": {
-    "minimatch": "^3.0.4",
+    "minimatch": "^10.2.5",
     "vscode-languageclient": "^10.1.0",
     "vscode-languageserver": "^10.1.0",
     "vscode-languageserver-textdocument": "^1.0.12",
@@ -140,24 +140,24 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@rspack/cli": "^2.1.1",
-    "@rspack/core": "^2.1.1",
+    "@rspack/cli": "^2.1.5",
+    "@rspack/core": "^2.1.5",
     "@textlint/types": "^15.7.1",
-    "@types/node": "^22.20.0",
-    "@types/vscode": "^1.100.0",
-    "@vscode/test-electron": "^3.0.0",
+    "@types/node": "^26.1.1",
+    "@types/vscode": "^1.125.0",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.9.2",
-    "eslint": "^10.5.0",
+    "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
-    "merge-options": "^3.0.4",
-    "npm-check-updates": "^11.8.5",
-    "npm-run-all": "^4.1.5",
-    "prettier": "^2.4.1",
-    "rimraf": "^3.0.2",
-    "sort-package-json": "^1.52.0",
+    "npm-check-updates": "^22.2.9",
+    "npm-run-all2": "^9.0.2",
+    "prettier": "^3.9.6",
+    "rimraf": "^6.1.3",
+    "sort-package-json": "^4.0.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.62.0"
+    "typescript-eslint": "^8.65.0"
   },
+  "packageManager": "npm@12.0.1+sha512.2f94fd8bf600416416a934bfc59c4991e8bff7372ef7d842784e2a8b8d48c81555ee645069ddea73625fb8e92dc261feab0188fd5dab6c22fefd46316f5f9140",
   "engines": {
     "node": ">=24.0.0 <25.0.0",
     "vscode": "^1.100.0"
@@ -166,8 +166,5 @@
   "galleryBanner": {
     "color": "#5acbe3",
     "theme": "light"
-  },
-  "prettier": {
-    "printWidth": 120
   }
 }

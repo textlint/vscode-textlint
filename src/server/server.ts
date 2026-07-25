@@ -24,7 +24,7 @@ import * as os from "os";
 import * as fs from "fs";
 import * as path from "path";
 import { createRequire } from "node:module";
-import minimatch from "minimatch";
+import { minimatch } from "minimatch";
 
 import {
   NoConfigNotification,
@@ -395,7 +395,7 @@ connection.onCodeAction((params) => {
 function toTextEdit(textDocument: TextDocument, af: AutoFix): TextEdit {
   return TextEdit.replace(
     Range.create(textDocument.positionAt(af.fix.range[0]), textDocument.positionAt(af.fix.range[1])),
-    af.fix.text || ""
+    af.fix.text || "",
   );
 }
 
