@@ -252,8 +252,8 @@ function candidates(root: string) {
   return () => fs.globSync(`${root}/.textlintr{c.js,c.yaml,c.yml,c,c.json}`);
 }
 
-function isTarget(root: string, file: string): boolean {
-  const relativePath = file.substring(root.length);
+function isTarget(rootUri: string, fileUri: URI): boolean {
+  const relativePath = path.posix.relative(URI.parse(rootUri).path, fileUri.path);
   return (
     settings.targetPath === "" ||
     minimatch(relativePath, settings.targetPath, {
@@ -301,7 +301,7 @@ async function validate(doc: TextDocument) {
   if (repo) {
     const [folder, engine] = lookupEngine(doc);
     const ext = URIUtils.extname(uri);
-    if (engine && -1 < engine.availableExtensions.findIndex((s) => s === ext) && isTarget(folder, uri.fsPath)) {
+    if (engine && -1 < engine.availableExtensions.findIndex((s) => s === ext) && isTarget(folder, uri)) {
       repo.clear();
       try {
         if (engine.linter.scanFilePath) {

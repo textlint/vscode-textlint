@@ -38,7 +38,7 @@ When working with new projects, you might need to create a `.textlintrc` configu
   - Absolute path to textlint ignore file.
   - See [here](https://textlint.github.io/docs/ignore.html#ignoring-files-textlintignore) for more information about ignore files.
 - `textlint.targetPath`
-  - Set a glob pattern to determine which files to lint.
+  - A glob pattern relative to the workspace folder that selects files to lint. Leave empty to lint all supported files.
 - `textlint.languages`
   - Languages to lint with textlint.
 
