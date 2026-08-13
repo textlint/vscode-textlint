@@ -2,13 +2,13 @@ import {
   createConnection,
   CodeAction,
   CodeActionKind,
-  Command,
   Diagnostic,
   DiagnosticSeverity,
   Position,
   Range,
   Files,
   TextDocuments,
+  TextDocumentEdit,
   TextEdit,
   TextDocumentSyncKind,
   ErrorMessageTracker,
@@ -29,7 +29,6 @@ import minimatch from "minimatch";
 import {
   NoConfigNotification,
   NoLibraryNotification,
-  AllFixesRequest,
   StatusNotification,
   StartProgressNotification,
   StopProgressNotification,
@@ -43,6 +42,7 @@ import type { TextlintMessage } from "@textlint/types";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
+const sourceFixAllTextlint = `${CodeActionKind.SourceFixAll}.textlint`;
 let trace: number;
 documents.listen(connection);
 
@@ -61,7 +61,9 @@ connection.onInitialize(async (params) => {
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Full,
-      codeActionProvider: true,
+      codeActionProvider: {
+        codeActionKinds: [CodeActionKind.QuickFix, sourceFixAllTextlint],
+      },
       workspace: {
         workspaceFolders: {
           supported: true,
@@ -289,43 +291,73 @@ function lookupEngine(doc: TextDocument): [string, WorkspaceLinter | undefined] 
   return ["", undefined];
 }
 
-async function validate(doc: TextDocument) {
-  TRACE(`validate ${doc.uri}`);
-  const uri = URI.parse(doc.uri);
-  if (doc.uri.startsWith("file:") === false) {
+async function validate(doc: TextDocument): Promise<void> {
+  const documentUri = doc.uri;
+  const version = doc.version;
+  const text = doc.getText();
+  TRACE(`validate ${documentUri}`);
+  if (documentUri.startsWith("file:") === false) {
     TRACE("validation skipped...");
     return;
   }
 
-  const repo = fixRepo.get(doc.uri);
-  if (repo) {
-    const [folder, engine] = lookupEngine(doc);
-    const ext = URIUtils.extname(uri);
-    if (engine && -1 < engine.availableExtensions.findIndex((s) => s === ext) && isTarget(folder, uri)) {
-      repo.clear();
-      try {
-        if (engine.linter.scanFilePath) {
-          const result = await engine.linter.scanFilePath(uri.fsPath);
-          if (result.status !== "ok") {
-            TRACE(`ignore ${doc.uri}`);
-            return;
-          }
-        }
-        const results = [await engine.linter.lintText(doc.getText(), uri.fsPath)];
-        TRACE("results", results);
-        for (const result of results) {
-          const diagnostics = result.messages.map(toDiagnostic).map(([msg, diag]) => {
-            repo.register(doc, diag, msg);
-            return diag;
-          });
-          TRACE(`sendDiagnostics ${doc.uri}`);
-          connection.sendDiagnostics({ uri: doc.uri, diagnostics });
-        }
-      } catch (e) {
-        sendError(e);
-      }
+  const repo = fixRepo.get(documentUri);
+  if (!repo) {
+    return;
+  }
+
+  const [folder, engine] = lookupEngine(doc);
+  const uri = URI.parse(documentUri);
+  const ext = URIUtils.extname(uri);
+  if (!engine || !engine.availableExtensions.includes(ext) || !isTarget(folder, uri)) {
+    publishValidation(documentUri, version, repo, []);
+    return;
+  }
+
+  try {
+    const scanResult = await engine.linter.scanFilePath(uri.fsPath);
+    if (scanResult.status === "ignored") {
+      TRACE(`ignore ${documentUri}`);
+      publishValidation(documentUri, version, repo, []);
+      return;
+    }
+    if (
+      scanResult.status === "error" &&
+      scanResult.errors.some((error) => error.type !== "ScanFilePathNoExistFilePathError")
+    ) {
+      throw new Error(scanResult.errors.map((error) => error.type).join(", "));
+    }
+
+    const result = await engine.linter.lintText(text, uri.fsPath);
+    TRACE("result", result);
+    publishValidation(
+      documentUri,
+      version,
+      repo,
+      result.messages.map((message) => toDiagnostic(message))
+    );
+  } catch (error) {
+    if (publishValidation(documentUri, version, repo, [])) {
+      throw error;
     }
   }
+}
+
+function publishValidation(
+  uri: string,
+  version: number,
+  repo: TextlintFixRepository,
+  entries: [TextlintMessage, Diagnostic][]
+) {
+  if (documents.get(uri)?.version !== version || fixRepo.get(uri) !== repo) {
+    TRACE(`discard stale validation ${uri}`, version);
+    return false;
+  }
+
+  repo.replace(version, entries);
+  TRACE(`sendDiagnostics ${uri}`);
+  connection.sendDiagnostics({ uri, diagnostics: entries.map(([, diagnostic]) => diagnostic) });
+  return true;
 }
 
 function toDiagnosticSeverity(severity?: number): DiagnosticSeverity {
@@ -361,57 +393,90 @@ function toDiagnostic(message: TextlintMessage): [TextlintMessage, Diagnostic] {
   return [message, diag];
 }
 
-connection.onCodeAction((params) => {
+connection.onCodeAction(async (params) => {
   TRACE("onCodeAction", params);
-  const result: CodeAction[] = [];
   const uri = params.textDocument.uri;
   const repo = fixRepo.get(uri);
-  if (repo && repo.isEmpty() === false) {
-    const doc = documents.get(uri);
-    if (!doc) {
-      return result;
-    }
-    const toAction = (title: string, edits: TextEdit[]) => {
-      const cmd = Command.create(title, "textlint.applyTextEdits", uri, repo.version, edits);
-      return CodeAction.create(title, cmd, CodeActionKind.QuickFix);
-    };
-    const toTE = (af: AutoFix) => toTextEdit(doc, af);
+  const doc = documents.get(uri);
+  if (!repo || !doc) {
+    return [];
+  }
 
-    repo.find(params.context.diagnostics).forEach((af) => {
-      result.push(toAction(`Fix this ${af.ruleId} problem`, [toTE(af)]));
-      const same = repo.separatedValues((v) => v.ruleId === af.ruleId);
-      if (0 < same.length) {
-        result.push(toAction(`Fix all ${af.ruleId} problems`, same.map(toTE)));
-      }
-    });
-    const all = repo.separatedValues();
-    if (0 < all.length) {
-      result.push(toAction(`Fix all auto-fixable problems`, all.map(toTE)));
+  const version = doc.version;
+  const only = params.context.only;
+  const quickFixRequested =
+    only === undefined || only.some((kind) => kind === CodeActionKind.Empty || kind === CodeActionKind.QuickFix);
+  const sourceFixAllRequested =
+    only?.some((kind) =>
+      [CodeActionKind.Empty, CodeActionKind.Source, CodeActionKind.SourceFixAll, sourceFixAllTextlint].includes(kind)
+    ) ?? false;
+  if (!quickFixRequested && !sourceFixAllRequested) {
+    return [];
+  }
+
+  if (sourceFixAllRequested || repo.version !== version) {
+    try {
+      await validate(doc);
+    } catch (error) {
+      sendError(error);
+      return [];
     }
   }
-  return result;
+  if (
+    documents.get(uri)?.version !== version ||
+    fixRepo.get(uri) !== repo ||
+    repo.version !== version ||
+    repo.isEmpty()
+  ) {
+    return [];
+  }
+
+  const toWorkspaceEdit = (fixes: AutoFix[]) => ({
+    documentChanges: [
+      TextDocumentEdit.create(
+        { uri, version: repo.version },
+        fixes.map((fix) => toTextEdit(doc, fix))
+      ),
+    ],
+  });
+  const requestedFixes = quickFixRequested ? repo.find(params.context.diagnostics) : [];
+  const quickFixes: CodeAction[] = requestedFixes.map((fix) => ({
+    title: `Fix this ${fix.ruleId} problem`,
+    kind: CodeActionKind.QuickFix,
+    diagnostics: [fix.diagnostic],
+    edit: toWorkspaceEdit([fix]),
+  }));
+  const sameRuleFixes: CodeAction[] = [...new Set(requestedFixes.map((fix) => fix.ruleId))].flatMap((ruleId) => {
+    const fixes = repo.separatedValues((fix) => fix.ruleId === ruleId);
+    return fixes.length > 1
+      ? [
+          {
+            title: `Fix all ${ruleId} problems`,
+            kind: CodeActionKind.QuickFix,
+            diagnostics: fixes.map((fix) => fix.diagnostic),
+            edit: toWorkspaceEdit(fixes),
+          },
+        ]
+      : [];
+  });
+  const sourceFixes: CodeAction[] = sourceFixAllRequested
+    ? [
+        {
+          title: `Fix all auto-fixable textlint problems`,
+          kind: sourceFixAllTextlint,
+          edit: toWorkspaceEdit(repo.separatedValues()),
+        },
+      ]
+    : [];
+  return [...quickFixes, ...sameRuleFixes, ...sourceFixes];
 });
 
 function toTextEdit(textDocument: TextDocument, af: AutoFix): TextEdit {
   return TextEdit.replace(
     Range.create(textDocument.positionAt(af.fix.range[0]), textDocument.positionAt(af.fix.range[1])),
-    af.fix.text || ""
+    af.fix.text
   );
 }
-
-connection.onRequest(AllFixesRequest.type, (params: AllFixesRequest.Params) => {
-  const uri = params.textDocument.uri;
-  TRACE(`AllFixesRequest ${uri}`);
-  const textDocument = documents.get(uri);
-  const repo = fixRepo.get(uri);
-  if (repo && repo.isEmpty() === false && textDocument) {
-    return {
-      documentVersion: repo.version,
-      edits: repo.separatedValues().map((af) => toTextEdit(textDocument, af)),
-    };
-  }
-  return null;
-});
 
 let inProgress = 0;
 function sendStartProgress() {

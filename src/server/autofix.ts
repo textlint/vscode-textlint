@@ -1,80 +1,65 @@
-import { Diagnostic } from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
+import type { Diagnostic } from "vscode-languageserver";
 import type { TextlintMessage, TextlintMessageFixCommand } from "@textlint/types";
 
 export interface AutoFix {
-  version: number;
   ruleId: string;
   fix: TextlintMessageFixCommand;
+  diagnostic: Diagnostic;
 }
 
 export class TextlintFixRepository {
-  map: Map<string, AutoFix> = new Map();
+  private fixes: AutoFix[] = [];
+  private _version = -1;
 
-  register(doc: TextDocument, diag: Diagnostic, msg: TextlintMessage) {
-    if (msg.fix && msg.ruleId) {
-      const fix = {
-        version: doc.version,
-        ruleId: msg.ruleId,
-        fix: msg.fix,
-      };
-      this.map.set(this.toKey(diag), fix);
-    }
+  replace(version: number, entries: [TextlintMessage, Diagnostic][]) {
+    this.fixes = entries.flatMap(([message, diagnostic]) =>
+      message.fix
+        ? [
+            {
+              diagnostic,
+              ruleId: message.ruleId,
+              fix: message.fix,
+            },
+          ]
+        : []
+    );
+    this._version = version;
   }
 
-  find(diags: Diagnostic[]): AutoFix[] {
-    return diags.map((d) => this.map.get(this.toKey(d))).filter((fix) => fix !== undefined);
-  }
-
-  clear = () => this.map.clear();
-
-  toKey(diagnostic: Diagnostic): string {
-    const range = diagnostic.range;
-    return `[${range.start.line},${range.start.character},${range.end.line},${range.end.character}]-${diagnostic.code}`;
+  find(diagnostics: Diagnostic[]): AutoFix[] {
+    return this.fixes.filter((fix) =>
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.source === fix.diagnostic.source &&
+          diagnostic.code === fix.diagnostic.code &&
+          diagnostic.message === fix.diagnostic.message &&
+          diagnostic.range.start.line === fix.diagnostic.range.start.line &&
+          diagnostic.range.start.character === fix.diagnostic.range.start.character &&
+          diagnostic.range.end.line === fix.diagnostic.range.end.line &&
+          diagnostic.range.end.character === fix.diagnostic.range.end.character
+      )
+    );
   }
 
   isEmpty(): boolean {
-    return this.map.size < 1;
+    return this.fixes.length === 0;
   }
 
   get version(): number {
-    const af = this.map.values().next().value;
-    return af ? af.version : -1;
-  }
-
-  sortedValues(): AutoFix[] {
-    const a = Array.from(this.map.values());
-    return a.sort((left, right) => {
-      const lr = left.fix.range;
-      const rr = right.fix.range;
-      if (lr[0] === rr[0]) {
-        if (lr[1] === rr[1]) {
-          return 0;
-        }
-        return lr[1] < rr[1] ? -1 : 1;
-      }
-      return lr[0] < rr[0] ? -1 : 1;
-    });
-  }
-
-  static overlaps(lastEdit: AutoFix, newEdit: AutoFix): boolean {
-    return !!lastEdit && lastEdit.fix.range[1] > newEdit.fix.range[0];
+    return this._version;
   }
 
   separatedValues(filter: (fix: AutoFix) => boolean = () => true): AutoFix[] {
-    const sv = this.sortedValues().filter(filter);
-    if (sv.length < 1) {
-      return sv;
-    }
-    const result: AutoFix[] = [];
-    result.push(sv[0]);
-    sv.reduce((prev, cur) => {
-      if (TextlintFixRepository.overlaps(prev, cur) === false) {
-        result.push(cur);
-        return cur;
+    const candidates = this.fixes
+      .filter(filter)
+      .sort((left, right) => right.fix.range[1] - left.fix.range[1] || right.fix.range[0] - left.fix.range[0]);
+    const result = candidates.slice(0, 1);
+    for (const fix of candidates.slice(1)) {
+      const lastStart = result[result.length - 1].fix.range[0];
+      if (fix.fix.range[1] <= lastStart) {
+        result.push(fix);
       }
-      return prev;
-    });
-    return result;
+    }
+    return result.reverse();
   }
 }

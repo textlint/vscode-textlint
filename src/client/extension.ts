@@ -1,24 +1,6 @@
-import minimatch from "minimatch";
+import { workspace, window, commands, ExtensionContext, QuickPickItem, WorkspaceFolder } from "vscode";
 
-import {
-  workspace,
-  window,
-  commands,
-  ExtensionContext,
-  Disposable,
-  QuickPickItem,
-  WorkspaceFolder,
-  TextDocumentSaveReason,
-  TextEditor,
-} from "vscode";
-
-import {
-  TextEdit,
-  State as ServerState,
-  ErrorHandler,
-  CloseAction,
-  RevealOutputChannelOn,
-} from "vscode-languageclient";
+import { State as ServerState, ErrorHandler, CloseAction, RevealOutputChannelOn } from "vscode-languageclient";
 
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from "vscode-languageclient/node";
 
@@ -31,7 +13,6 @@ import {
   NoConfigNotification,
   NoLibraryNotification,
   ExitNotification,
-  AllFixesRequest,
   StartProgressNotification,
   StopProgressNotification,
   ServerInitializationOptions,
@@ -44,13 +25,11 @@ import { Status, StatusBar } from "./status";
 const defaultConfig: ExtensionSettings = {
   ...defaultServerInitializationOptions,
   languages: [],
-  autoFixOnSave: false,
 };
 
 export interface ExtensionInternal {
   client: LanguageClient;
   statusBar: StatusBar;
-  onAllFixesComplete(fn: (te: TextEditor, edits: TextEdit[], ok: boolean) => void): Disposable;
 }
 
 export async function activate(context: ExtensionContext): Promise<ExtensionInternal> {
@@ -86,13 +65,8 @@ You need to reopen the workspace after installing textlint.`
   client.onNotification(StopProgressNotification.type, () => statusBar.stopProgress());
 
   client.onNotification(LogTraceNotification.type, (p) => client.info(p.message, p.verbose));
-  const changeConfigHandler = () => configureAutoFixOnSave(client);
-  workspace.onDidChangeConfiguration(changeConfigHandler);
-  changeConfigHandler();
   context.subscriptions.push(
     commands.registerCommand("textlint.createConfig", createConfig),
-    commands.registerCommand("textlint.applyTextEdits", makeApplyFixFn(client)),
-    commands.registerCommand("textlint.executeAutofix", makeAutoFixFn(client)),
     commands.registerCommand("textlint.showOutputChannel", () => client.outputChannel.show()),
     client,
     statusBar
@@ -102,7 +76,6 @@ You need to reopen the workspace after installing textlint.`
   return {
     client,
     statusBar,
-    onAllFixesComplete,
   };
 }
 
@@ -229,117 +202,6 @@ function toQuickPickItems(folders: WorkspaceFolder[]): ({ folder: WorkspaceFolde
   });
 }
 
-let autoFixOnSave: Disposable | undefined;
-
-function configureAutoFixOnSave(client: LanguageClient) {
-  const { autoFixOnSave: autoFixEnabled, languages, targetPath } = readConfig();
-  disposeAutoFixOnSave();
-
-  if (autoFixEnabled) {
-    const supportedLanguages = new Set(languages);
-    autoFixOnSave = workspace.onWillSaveTextDocument((event) => {
-      const doc = event.document;
-      if (
-        supportedLanguages.has(doc.languageId) &&
-        event.reason !== TextDocumentSaveReason.AfterDelay &&
-        (targetPath === "" ||
-          minimatch(workspace.asRelativePath(doc.uri), targetPath, {
-            matchBase: true,
-          }))
-      ) {
-        const version = doc.version;
-        const uri: string = doc.uri.toString();
-        event.waitUntil(
-          client.sendRequest(AllFixesRequest.type, { textDocument: { uri } }).then((result) => {
-            return result && result.documentVersion === version
-              ? client.protocol2CodeConverter.asTextEdits(result.edits)
-              : [];
-          })
-        );
-      }
-    });
-  }
-}
-
-function disposeAutoFixOnSave() {
-  if (autoFixOnSave) {
-    autoFixOnSave.dispose();
-    autoFixOnSave = undefined;
-  }
-}
-
-function makeAutoFixFn(client: LanguageClient) {
-  return () => {
-    const textEditor = window.activeTextEditor;
-    if (textEditor) {
-      const uri: string = textEditor.document.uri.toString();
-      client.sendRequest(AllFixesRequest.type, { textDocument: { uri } }).then(
-        async (result) => {
-          if (result) {
-            await applyTextEdits(client, uri, result.documentVersion, result.edits);
-          }
-        },
-        (error) => {
-          client.error("Failed to apply textlint fixes to the document.", error);
-        }
-      );
-    }
-  };
-}
-
-function makeApplyFixFn(client: LanguageClient) {
-  return async (uri: string, documentVersion: number, edits: TextEdit[]) => {
-    await applyTextEdits(client, uri, documentVersion, edits);
-  };
-}
-
-const allFixesCompletes: ((te: TextEditor, edits: TextEdit[], ok: boolean) => void)[] = [];
-function onAllFixesComplete(fn: (te: TextEditor, edits: TextEdit[], ok: boolean) => void) {
-  allFixesCompletes.push(fn);
-  return new Disposable(() => {
-    const index = allFixesCompletes.indexOf(fn);
-    if (index >= 0) {
-      allFixesCompletes.splice(index, 1);
-    }
-  });
-}
-
-async function applyTextEdits(
-  client: LanguageClient,
-  uri: string,
-  documentVersion: number,
-  edits: TextEdit[]
-): Promise<boolean> {
-  const textEditor = window.activeTextEditor;
-  if (textEditor && textEditor.document.uri.toString() === uri) {
-    if (textEditor.document.version === documentVersion) {
-      return textEditor
-        .edit((mutator) => {
-          edits.forEach((ed) => mutator.replace(client.protocol2CodeConverter.asRange(ed.range), ed.newText));
-        })
-        .then(
-          (ok) => {
-            client.info("AllFixesComplete");
-            allFixesCompletes.forEach((fn) => fn(textEditor, edits, ok));
-            return true;
-          },
-          (errors) => {
-            client.error(errors.message, errors.stack);
-            return false;
-          }
-        );
-    } else {
-      window.showInformationMessage(`textlint fixes are outdated and can't be applied to ${uri}`);
-      return true;
-    }
-  }
-  return false;
-}
-
-export function deactivate() {
-  disposeAutoFixOnSave();
-}
-
 function readConfig(): ExtensionSettings {
   const config = workspace.getConfiguration("textlint");
   return {
@@ -349,7 +211,6 @@ function readConfig(): ExtensionSettings {
     nodePath: config.get("nodePath", defaultConfig.nodePath),
     run: config.get("run", defaultConfig.run),
     trace: config.get("trace", defaultConfig.trace),
-    autoFixOnSave: config.get("autoFixOnSave", defaultConfig.autoFixOnSave),
     targetPath: config.get("targetPath", defaultConfig.targetPath),
   };
 }

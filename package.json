@@ -41,11 +41,6 @@
   "contributes": {
     "commands": [
       {
-        "title": "Fix all auto-fixable Problems",
-        "category": "textlint",
-        "command": "textlint.executeAutofix"
-      },
-      {
         "title": "Create '.textlintrc' File",
         "category": "textlint",
         "command": "textlint.createConfig"
@@ -106,11 +101,6 @@
           ],
           "default": "onSave",
           "description": "Run the linter on save (onSave) or on type (onType)"
-        },
-        "textlint.autoFixOnSave": {
-          "type": "boolean",
-          "default": false,
-          "description": "Turns auto fix on save on or off."
         },
         "textlint.trace": {
           "type": "string",

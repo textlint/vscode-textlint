@@ -23,8 +23,18 @@ When working with new projects, you might need to create a `.textlintrc` configu
 
 ## Settings options
 
-- `textlint.autoFixOnSave`
-  - Default: `false`. When set to `true`, the extension will automatically fix auto-fixable errors on save.
+- `editor.codeActionsOnSave`
+
+  - To fix textlint errors automatically when explicitly saving a file, add the following to your VS Code settings:
+
+    ```json
+    {
+      "editor.codeActionsOnSave": {
+        "source.fixAll.textlint": "explicit"
+      }
+    }
+    ```
+
 - `textlint.run`
   - Controls when the linter runs. Options: `onSave` or `onType`. Default: `onSave`.
 - `textlint.nodePath`

@@ -1,5 +1,4 @@
-import { NotificationType0, NotificationType, RequestType } from "vscode-jsonrpc";
-import { TextDocumentIdentifier, TextEdit } from "vscode-languageserver-types";
+import { NotificationType0, NotificationType } from "vscode-jsonrpc";
 
 export type RunMode = "onSave" | "onType";
 export type TraceMode = "off" | "messages" | "verbose";
@@ -15,7 +14,6 @@ export interface ServerInitializationOptions {
 
 export interface ExtensionSettings extends ServerInitializationOptions {
   languages: string[];
-  autoFixOnSave: boolean;
 }
 
 export const defaultServerInitializationOptions: ServerInitializationOptions = {
@@ -62,19 +60,6 @@ export namespace NoLibraryNotification {
   export interface Params {
     workspaceFolder: string;
   }
-}
-
-export namespace AllFixesRequest {
-  export interface Params {
-    textDocument: TextDocumentIdentifier;
-  }
-
-  export interface Result {
-    documentVersion: number;
-    edits: TextEdit[];
-  }
-
-  export const type = new RequestType<Params, Result | null, void>("textDocument/textlint/allFixes");
 }
 
 export namespace StartProgressNotification {
