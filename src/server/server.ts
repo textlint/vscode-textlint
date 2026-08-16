@@ -315,14 +315,15 @@ async function validate(doc: TextDocument): Promise<void> {
   }
 
   try {
-    const scanResult = await engine.linter.scanFilePath(uri.fsPath);
-    if (scanResult.status === "ignored") {
+    // Some supported textlint v13 releases do not provide scanFilePath.
+    const scanResult = await engine.linter.scanFilePath?.(uri.fsPath);
+    if (scanResult?.status === "ignored") {
       TRACE(`ignore ${documentUri}`);
       publishValidation(documentUri, version, repo, []);
       return;
     }
     if (
-      scanResult.status === "error" &&
+      scanResult?.status === "error" &&
       scanResult.errors.some((error) => error.type !== "ScanFilePathNoExistFilePathError")
     ) {
       throw new Error(scanResult.errors.map((error) => error.type).join(", "));
