@@ -37,7 +37,6 @@ export class StatusBar {
   private _supports: string[];
   private _status = Status.OK;
   private _serverRunning = false;
-  private _intervalToken: ReturnType<typeof setInterval> | undefined;
   constructor(supports: string[]) {
     this._supports = supports;
     this._delegate.text = this._status.label;
@@ -46,7 +45,6 @@ export class StatusBar {
   }
 
   dispose() {
-    this.stopProgress();
     this._delegate.dispose();
   }
 
@@ -103,27 +101,5 @@ export class StatusBar {
     const shouldShowStatusBar =
       !this.serverRunning || this._status !== Status.OK || this._supports.includes(languageId);
     this.show(shouldShowStatusBar);
-  }
-
-  startProgress() {
-    if (!this._intervalToken) {
-      let c = 0;
-      const orig = this._delegate.text;
-      const chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
-      const l = chars.length;
-      this._intervalToken = setInterval(() => {
-        const t = c++ % l;
-        this._delegate.text = chars[t] + " " + orig;
-      }, 300);
-    }
-  }
-
-  stopProgress() {
-    if (this._intervalToken) {
-      const tk = this._intervalToken;
-      this._intervalToken = undefined;
-      clearInterval(tk);
-      this.update();
-    }
   }
 }

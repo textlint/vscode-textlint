@@ -13,8 +13,6 @@ import {
   NoConfigNotification,
   NoLibraryNotification,
   ExitNotification,
-  StartProgressNotification,
-  StopProgressNotification,
   ServerInitializationOptions,
   ExtensionSettings,
   defaultServerInitializationOptions,
@@ -61,9 +59,6 @@ To use textlint in this workspace please install textlint using 'npm install tex
 You need to reopen the workspace after installing textlint.`
     );
   });
-  client.onNotification(StartProgressNotification.type, () => statusBar.startProgress());
-  client.onNotification(StopProgressNotification.type, () => statusBar.stopProgress());
-
   client.onNotification(LogTraceNotification.type, (p) => client.info(p.message, p.verbose));
   context.subscriptions.push(
     commands.registerCommand("textlint.createConfig", createConfig),

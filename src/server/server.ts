@@ -30,8 +30,6 @@ import {
   NoConfigNotification,
   NoLibraryNotification,
   StatusNotification,
-  StartProgressNotification,
-  StopProgressNotification,
   ServerInitializationOptions,
   defaultServerInitializationOptions,
 } from "../shared/types";
@@ -228,26 +226,38 @@ documents.onDidClose((event) => {
 });
 
 async function validateSingle(textDocument: TextDocument) {
-  sendStartProgress();
-  return validate(textDocument)
-    .then(sendOK, (error) => {
+  return withValidationProgress(async () => {
+    try {
+      await validate(textDocument);
+      sendOK();
+    } catch (error) {
       sendError(error);
-    })
-    .then(sendStopProgress);
+    }
+  });
 }
 
 async function validateMany(textDocuments: TextDocument[]) {
-  const tracker = new ErrorMessageTracker();
-  sendStartProgress();
-  for (const doc of textDocuments) {
-    try {
-      await validate(doc);
-    } catch (err) {
-      tracker.add(errorMessage(err));
+  return withValidationProgress(async () => {
+    const tracker = new ErrorMessageTracker();
+    for (const doc of textDocuments) {
+      try {
+        await validate(doc);
+      } catch (err) {
+        tracker.add(errorMessage(err));
+      }
     }
+    tracker.sendErrors(connection);
+  });
+}
+
+async function withValidationProgress<T>(task: () => Promise<T>): Promise<T> {
+  const progress = await connection.window.createWorkDoneProgress();
+  progress.begin("textlint", undefined, "Linting");
+  try {
+    return await task();
+  } finally {
+    progress.done();
   }
-  tracker.sendErrors(connection);
-  sendStopProgress();
 }
 
 function candidates(root: string) {
@@ -477,24 +487,6 @@ function toTextEdit(textDocument: TextDocument, af: AutoFix): TextEdit {
     Range.create(textDocument.positionAt(af.fix.range[0]), textDocument.positionAt(af.fix.range[1])),
     af.fix.text
   );
-}
-
-let inProgress = 0;
-function sendStartProgress() {
-  TRACE(`sendStartProgress ${inProgress}`);
-  if (inProgress < 1) {
-    inProgress = 0;
-    connection.sendNotification(StartProgressNotification.type);
-  }
-  inProgress++;
-}
-
-function sendStopProgress() {
-  TRACE(`sendStopProgress ${inProgress}`);
-  if (--inProgress < 1) {
-    inProgress = 0;
-    connection.sendNotification(StopProgressNotification.type);
-  }
 }
 
 function sendOK() {

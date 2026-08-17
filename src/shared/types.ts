@@ -1,4 +1,4 @@
-import { NotificationType0, NotificationType } from "vscode-jsonrpc";
+import { NotificationType } from "vscode-jsonrpc";
 
 export type RunMode = "onSave" | "onType";
 export type TraceMode = "off" | "messages" | "verbose";
@@ -60,12 +60,4 @@ export namespace NoLibraryNotification {
   export interface Params {
     workspaceFolder: string;
   }
-}
-
-export namespace StartProgressNotification {
-  export const type = new NotificationType0("textlint/progress/start");
-}
-
-export namespace StopProgressNotification {
-  export const type = new NotificationType0("textlint/progress/stop");
 }
