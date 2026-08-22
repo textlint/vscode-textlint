@@ -1,39 +1,23 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {
-    "editor.formatOnSave": false,
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "settings": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit"
-    },
-    "[json]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true
-    },
-    "[javascript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true
-    },
-    "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true
-    },
-    "[typescriptreact]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true
+      "source.fixAll.oxc": "explicit",
     },
     "typescript.tsdk": "./node_modules/typescript/lib",
-    "npm.packageManager": "npm"
+    "npm.packageManager": "npm",
   },
   "extensions": {
     "recommendations": [
       "amodio.tsl-problem-matcher",
-      "dbaeumer.vscode-eslint",
       "editorconfig.editorconfig",
-      "esbenp.prettier-vscode"
-    ]
+      "oxc.oxc-vscode",
+    ],
   },
 }
