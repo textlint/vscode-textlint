@@ -1,11 +1,5 @@
-import {
-  workspace,
-  window,
-  commands,
-  ExtensionContext,
-  QuickPickItem,
-  WorkspaceFolder,
-} from "vscode";
+import { workspace, window, commands } from "vscode";
+import type { ExtensionContext, QuickPickItem, WorkspaceFolder } from "vscode";
 
 import {
   State as ServerState,
@@ -30,12 +24,12 @@ import {
   NoConfigNotification,
   NoLibraryNotification,
   ExitNotification,
-  ServerInitializationOptions,
   ExtensionSettings,
   defaultServerInitializationOptions,
 } from "../shared/types";
 
 import { Status, StatusBar } from "./status";
+import type { StatusInfo } from "./status";
 
 const defaultConfig: ExtensionSettings = {
   ...defaultServerInitializationOptions,
@@ -43,43 +37,47 @@ const defaultConfig: ExtensionSettings = {
 };
 
 export interface ExtensionInternal {
-  client: LanguageClient;
-  statusBar: StatusBar;
+  readonly client: LanguageClient;
+  readonly statusBar: StatusBar;
 }
 
 export async function activate(context: ExtensionContext): Promise<ExtensionInternal> {
   const client = newClient(context);
   const statusBar = new StatusBar(readConfig().languages);
   client.onDidChangeState((event) => {
-    statusBar.serverRunning = event.newState === ServerState.Running;
+    statusBar.setServerRunning(event.newState === ServerState.Running);
   });
-  client.onNotification(StatusNotification.type, (p: StatusNotification.StatusParams) => {
-    statusBar.status = to(p.status);
-    if (p.message || p.cause) {
-      statusBar.status.log(client, p.message ?? "", p.cause);
+  client.onNotification(StatusNotification.type, (params) => {
+    statusBar.setStatus(to(params.status));
+    if (params.message !== undefined || params.cause !== undefined) {
+      statusBar.status.log(client, params.message ?? "", params.cause);
     }
   });
-  client.onNotification(NoConfigNotification.type, (p) => {
-    statusBar.status = Status.WARN;
+  client.onNotification(NoConfigNotification.type, (params) => {
+    statusBar.setStatus(Status.WARN);
     statusBar.status.log(
       client,
-      `No textlint configuration (e.g .textlintrc) found in ${p.workspaceFolder} .
+      `No textlint configuration (e.g .textlintrc) found in ${params.workspaceFolder} .
 File will not be validated. Consider running the 'Create .textlintrc file' command.`,
     );
   });
-  client.onNotification(NoLibraryNotification.type, (p) => {
-    statusBar.status = Status.WARN;
+  client.onNotification(NoLibraryNotification.type, (params) => {
+    statusBar.setStatus(Status.WARN);
     statusBar.status.log(
       client,
-      `Failed to load the textlint library in ${p.workspaceFolder} .
+      `Failed to load the textlint library in ${params.workspaceFolder} .
 To use textlint in this workspace please install textlint using 'npm install textlint' or globally using 'npm install -g textlint'.
 You need to reopen the workspace after installing textlint.`,
     );
   });
-  client.onNotification(LogTraceNotification.type, (p) =>{  client.info(p.message, p.verbose); });
+  client.onNotification(LogTraceNotification.type, (p) => {
+    client.info(p.message, p.verbose);
+  });
   context.subscriptions.push(
     commands.registerCommand("textlint.createConfig", createConfig),
-    commands.registerCommand("textlint.showOutputChannel", () =>{  client.outputChannel.show(); }),
+    commands.registerCommand("textlint.showOutputChannel", () => {
+      client.outputChannel.show();
+    }),
     client,
     statusBar,
   );
@@ -94,13 +92,10 @@ You need to reopen the workspace after installing textlint.`,
 function newClient(context: ExtensionContext): LanguageClient {
   const module = URIUtils.joinPath(context.extensionUri, "dist", "server.js").fsPath;
   const debugOptions = { execArgv: ["--nolazy", "--inspect=6011"] };
-
   const serverOptions: ServerOptions = {
     run: { module, transport: TransportKind.ipc },
     debug: { module, transport: TransportKind.ipc, options: debugOptions },
   };
-
-  // eslint-disable-next-line prefer-const
   let defaultErrorHandler: ErrorHandler;
   let serverCalledProcessExit = false;
   const textlintConfig = readConfig();
@@ -111,7 +106,6 @@ function newClient(context: ExtensionContext): LanguageClient {
     diagnosticCollectionName: "textlint",
     revealOutputChannelOn: RevealOutputChannelOn.Error,
     synchronize: {
-      configurationSection: "textlint",
       fileEvents: [
         workspace.createFileSystemWatcher("**/package.json"),
         workspace.createFileSystemWatcher("**/.textlintrc"),
@@ -119,7 +113,6 @@ function newClient(context: ExtensionContext): LanguageClient {
         workspace.createFileSystemWatcher("**/.textlintignore"),
       ],
     },
-    initializationOptions: readInitializationOptions,
     initializationFailedHandler: (error) => {
       client.error("Server initialization failed.", error);
       return false;
@@ -136,7 +129,6 @@ function newClient(context: ExtensionContext): LanguageClient {
       },
     },
   };
-
   const client = new LanguageClient("textlint", serverOptions, clientOptions);
   defaultErrorHandler = client.createDefaultErrorHandler();
   client.onNotification(ExitNotification.type, () => {
@@ -174,40 +166,42 @@ async function createConfig() {
 async function filterNoConfigFolders(
   folders: readonly WorkspaceFolder[],
 ): Promise<WorkspaceFolder[]> {
-  const result = [];
-  outer: for (const folder of folders) {
-    const candidates = ["", ".js", ".yaml", ".yml", ".json"].map((ext) =>
-      URIUtils.joinPath(folder.uri, ".textlintrc" + ext),
-    );
-    for (const configPath of candidates) {
-      try {
-        await workspace.fs.stat(configPath);
-        continue outer;
-        // eslint-disable-next-line no-empty
-      } catch {}
-    }
-    result.push(folder);
-  }
-  return result;
+  const results = await Promise.all(
+    folders.map(async (folder) => {
+      const candidates = ["", ".js", ".yaml", ".yml", ".json"].map((ext) =>
+        URIUtils.joinPath(folder.uri, ".textlintrc" + ext),
+      );
+      const existing = await Promise.all(
+        candidates.map(async (configPath) => {
+          try {
+            await workspace.fs.stat(configPath);
+            return true;
+          } catch {
+            return false;
+          }
+        }),
+      );
+      return existing.includes(true) ? undefined : folder;
+    }),
+  );
+  return results.filter((folder) => folder !== undefined);
 }
 
 async function emitConfig(folder: WorkspaceFolder) {
-  if (folder) {
-    await workspace.fs.writeFile(
-      URIUtils.joinPath(folder.uri, ".textlintrc"),
-      Buffer.from(
-        `{
+  await workspace.fs.writeFile(
+    URIUtils.joinPath(folder.uri, ".textlintrc"),
+    Buffer.from(
+      `{
   "filters": {},
   "rules": {}
 }`,
-        "utf8",
-      ),
-    );
-  }
+      "utf8",
+    ),
+  );
 }
 
 function toQuickPickItems(
-  folders: WorkspaceFolder[],
+  folders: readonly WorkspaceFolder[],
 ): ({ folder: WorkspaceFolder } & QuickPickItem)[] {
   return folders.map((folder) => {
     return {
@@ -231,12 +225,7 @@ function readConfig(): ExtensionSettings {
   };
 }
 
-function readInitializationOptions(): ServerInitializationOptions {
-  const { configPath, ignorePath, nodePath, run, trace, targetPath } = readConfig();
-  return { configPath, ignorePath, nodePath, run, trace, targetPath };
-}
-
-function to(status: StatusNotification.Status): Status {
+function to(status: StatusNotification.Status): StatusInfo {
   switch (status) {
     case StatusNotification.Status.OK:
       return Status.OK;

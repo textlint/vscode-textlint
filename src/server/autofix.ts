@@ -1,5 +1,5 @@
-import type { Diagnostic } from "vscode-languageserver";
 import type { TextlintMessage, TextlintMessageFixCommand } from "@textlint/types";
+import type { Diagnostic } from "vscode-languageserver";
 
 export interface AutoFix {
   ruleId: string;
@@ -9,7 +9,7 @@ export interface AutoFix {
 
 export class TextlintFixRepository {
   private fixes: AutoFix[] = [];
-  private _version = -1;
+  private documentVersion = -1;
 
   replace(version: number, entries: [TextlintMessage, Diagnostic][]) {
     this.fixes = entries.flatMap(([message, diagnostic]) =>
@@ -23,10 +23,10 @@ export class TextlintFixRepository {
           ]
         : [],
     );
-    this._version = version;
+    this.documentVersion = version;
   }
 
-  find(diagnostics: Diagnostic[]): AutoFix[] {
+  findMatching(diagnostics: Diagnostic[]): AutoFix[] {
     return this.fixes.filter((fix) =>
       diagnostics.some(
         (diagnostic) =>
@@ -46,23 +46,27 @@ export class TextlintFixRepository {
   }
 
   get version(): number {
-    return this._version;
+    return this.documentVersion;
   }
 
   separatedValues(filter: (fix: AutoFix) => boolean = () => true): AutoFix[] {
     const candidates = this.fixes
       .filter(filter)
-      .sort(
+      .toSorted(
         (left, right) =>
           right.fix.range[1] - left.fix.range[1] || right.fix.range[0] - left.fix.range[0],
       );
     const result = candidates.slice(0, 1);
     for (const fix of candidates.slice(1)) {
-      const lastStart = result.at(-1).fix.range[0];
+      const last = result.at(-1);
+      if (!last) {
+        break;
+      }
+      const lastStart = last.fix.range[0];
       if (fix.fix.range[1] <= lastStart) {
         result.push(fix);
       }
     }
-    return result.reverse();
+    return result.toReversed();
   }
 }

@@ -1,91 +1,102 @@
-import { window, StatusBarAlignment, TextEditor } from "vscode";
+import { window, StatusBarAlignment } from "vscode";
+import type { TextEditor } from "vscode";
 
-export interface Status {
-  label: string;
-  color: string;
-  log: (
-    logger: {
-      info(message: string, data?: unknown): void;
-      warn(message: string, data?: unknown): void;
-      error(message: string, data?: unknown): void;
-    },
-    msg: string,
-    data?: unknown,
-  ) => void;
+type StatusLogger = Readonly<{
+  info: (message: string, data?: unknown) => void;
+  warn: (message: string, data?: unknown) => void;
+  error: (message: string, data?: unknown) => void;
+}>;
+
+export interface StatusInfo {
+  readonly label: string;
+  readonly color: string;
+  readonly log: (logger: StatusLogger, message: string, data?: unknown) => void;
 }
 
-export namespace Status {
-  export const OK: Status = {
+export const Status = {
+  OK: {
     label: "textlint",
     color: "",
-    log: (logger, msg, data?) =>{  logger.info(msg, data); },
-  };
-  export const WARN: Status = {
+    log(logger, message, data) {
+      logger.info(message, data);
+    },
+  },
+  WARN: {
     label: "textlint: Warning",
     color: "yellow",
-    log: (logger, msg, data?) =>{  logger.warn(msg, data); },
-  };
-  export const ERROR: Status = {
+    log(logger, message, data) {
+      logger.warn(message, data);
+    },
+  },
+  ERROR: {
     label: "textlint: Error",
     color: "darkred",
-    log: (logger, msg, data?) =>{  logger.error(msg, data); },
-  };
-}
+    log(logger, message, data) {
+      logger.error(message, data);
+    },
+  },
+} as const satisfies Record<"OK" | "WARN" | "ERROR", StatusInfo>;
 
 export class StatusBar {
-  private _delegate = window.createStatusBarItem(StatusBarAlignment.Right, 0);
-  private _supports: string[];
-  private _status = Status.OK;
-  private _serverRunning = false;
-  constructor(supports: string[]) {
-    this._supports = supports;
-    this._delegate.text = this._status.label;
-    window.onDidChangeActiveTextEditor((te) =>{  this.updateWith(te); });
+  private readonly delegate = window.createStatusBarItem(StatusBarAlignment.Right, 0);
+  private readonly supports: readonly string[];
+  private currentStatus: StatusInfo = Status.OK;
+  private isServerRunning = false;
+
+  constructor(supports: readonly string[]) {
+    this.supports = supports;
+    this.delegate.text = this.currentStatus.label;
+    window.onDidChangeActiveTextEditor((editor) => {
+      this.updateWith(editor);
+    });
     this.update();
   }
 
   dispose() {
-    this._delegate.dispose();
+    this.delegate.dispose();
   }
 
   show(show: boolean) {
     if (show) {
-      this._delegate.show();
+      this.delegate.show();
     } else {
-      this._delegate.hide();
+      this.delegate.hide();
     }
   }
+
   activate(languageId: string) {
     if (languageId === "") {
       return;
     }
 
-    if (this._supports.includes(languageId)) {
-      this._delegate.color = "";
-      this._delegate.tooltip =
+    if (this.supports.includes(languageId)) {
+      this.delegate.color = "";
+      this.delegate.tooltip =
         "need to restart this extension or check this extension setting and .textlintrc if textlint is not working.";
     } else {
-      this._delegate.color = "#818589";
-      this._delegate.tooltip = `textlint is inactive on ${languageId}.`;
+      this.delegate.color = "#818589";
+      this.delegate.tooltip = `textlint is inactive on ${languageId}.`;
     }
   }
 
-  get status(): Status {
-    return this._status;
+  get status(): StatusInfo {
+    return this.currentStatus;
   }
 
-  set status(s: Status) {
-    this._status = s;
+  setStatus(status: Readonly<StatusInfo>) {
+    this.currentStatus = status;
     this.update();
   }
 
   get serverRunning(): boolean {
-    return this._serverRunning;
+    return this.isServerRunning;
   }
 
-  set serverRunning(sr: boolean) {
-    this._serverRunning = sr;
-    window.showInformationMessage(sr ? "textlint server is running." : "textlint server stopped.");
+  setServerRunning(serverRunning: boolean) {
+    this.isServerRunning = serverRunning;
+    void window.showInformationMessage(
+      serverRunning ? "textlint server is running." : "textlint server stopped.",
+    );
     this.update();
   }
 
@@ -94,12 +105,12 @@ export class StatusBar {
   }
 
   updateWith(editor: TextEditor | undefined) {
-    this._delegate.text = this.status.label;
+    this.delegate.text = this.status.label;
     const languageId = editor?.document.languageId ?? "";
     this.activate(languageId);
 
     const shouldShowStatusBar =
-      !this.serverRunning || this._status !== Status.OK || this._supports.includes(languageId);
+      !this.serverRunning || this.currentStatus !== Status.OK || this.supports.includes(languageId);
     this.show(shouldShowStatusBar);
   }
 }

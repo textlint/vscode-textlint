@@ -4,12 +4,12 @@ export type RunMode = "onSave" | "onType";
 export type TraceMode = "off" | "messages" | "verbose";
 
 export interface ServerInitializationOptions {
-  configPath: string | null;
-  ignorePath: string | null;
-  nodePath: string | null;
-  run: RunMode;
-  trace: TraceMode;
-  targetPath: string;
+  readonly configPath: string | null;
+  readonly ignorePath: string | null;
+  readonly nodePath: string | null;
+  readonly run: RunMode;
+  readonly trace: TraceMode;
+  readonly targetPath: string;
 }
 
 export interface ExtensionSettings extends ServerInitializationOptions {

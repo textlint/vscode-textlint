@@ -1,29 +1,29 @@
 import {
   createConnection,
-  CodeAction,
   CodeActionKind,
-  Diagnostic,
+  ConfigurationRequest,
   DiagnosticSeverity,
-  Position,
-  Range,
-  Files,
+  DidChangeConfigurationNotification,
   TextDocuments,
-  TextDocumentEdit,
-  TextEdit,
   TextDocumentSyncKind,
   ErrorMessageTracker,
+  Files,
+  Position,
   ProposedFeatures,
-  WorkspaceFolder,
+  Range,
+  TextDocumentEdit,
+  TextEdit,
 } from "vscode-languageserver/node";
+import type { CodeAction, Diagnostic, WorkspaceFolder } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { Trace, LogTraceNotification } from "vscode-jsonrpc";
+import { LogTraceNotification, Trace } from "vscode-jsonrpc";
 import { URI, Utils as URIUtils } from "vscode-uri";
-
-import * as os from "os";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { createRequire } from "node:module";
+import { inspect } from "node:util";
 import minimatch from "minimatch";
 
 import {
@@ -34,28 +34,35 @@ import {
   defaultServerInitializationOptions,
 } from "../shared/types";
 
-import { TextlintFixRepository, AutoFix } from "./autofix";
+import { TextlintFixRepository } from "./autofix";
+import type { AutoFix } from "./autofix";
 import type { createLinter } from "textlint";
 import type { TextlintMessage } from "@textlint/types";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 const sourceFixAllTextlint = `${CodeActionKind.SourceFixAll}.textlint`;
-let trace: number;
+let trace = Trace.Off;
 documents.listen(connection);
 
+type TextlintLinter = ReturnType<typeof createLinter>;
+
+// Some supported textlint v13 releases omit scanFilePath despite the current type definition.
 type WorkspaceLinter = {
-  linter: ReturnType<typeof createLinter>;
+  linter: {
+    lintText: TextlintLinter["lintText"];
+    scanFilePath?: TextlintLinter["scanFilePath"];
+  };
   availableExtensions: string[];
 };
 
-let settings: ServerInitializationOptions;
-const linterRepo: Map<string /* workspaceFolder uri */, WorkspaceLinter> = new Map();
-const fixRepo: Map<string /* uri */, TextlintFixRepository> = new Map();
+type TextlintModule = Pick<typeof import("textlint"), "createLinter" | "loadTextlintrc">;
 
-connection.onInitialize(async (params) => {
-  settings = params.initializationOptions ?? defaultServerInitializationOptions;
-  trace = Trace.fromString(settings.trace);
+let settings = defaultServerInitializationOptions;
+const lintersByWorkspaceFolderUri: Map<string, WorkspaceLinter> = new Map();
+const fixRepositoriesByDocumentUri: Map<string, TextlintFixRepository> = new Map();
+
+connection.onInitialize(() => {
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Full,
@@ -73,47 +80,53 @@ connection.onInitialize(async (params) => {
 });
 
 connection.onInitialized(async () => {
+  await connection.client.register(DidChangeConfigurationNotification.type);
+  await updateSettings();
   const folders = await connection.workspace.getWorkspaceFolders();
   await configureEngine(folders);
   connection.workspace.onDidChangeWorkspaceFolders(async (event) => {
     for (const folder of event.removed) {
-      linterRepo.delete(folder.uri);
+      lintersByWorkspaceFolderUri.delete(folder.uri);
     }
     await reConfigure();
   });
 });
 
 async function configureEngine(folders: WorkspaceFolder[] | null) {
-  for (const folder of folders ?? []) {
-    TRACE(`configureEngine ${folder.uri}`);
-    const root = URI.parse(folder.uri).fsPath;
-    try {
-      const configFile = lookupConfig(root);
-      const ignoreFile = lookupIgnore(root);
+  await Promise.all(
+    (folders ?? []).map(async (folder) => {
+      TRACE(`configureEngine ${folder.uri}`);
+      const root = URI.parse(folder.uri).fsPath;
+      try {
+        const configFile = lookupConfig(root);
+        const ignoreFile = lookupIgnore(root);
 
-      const mod = await resolveModule(root);
-      const descriptor = await mod.loadTextlintrc({
-        configFilePath: configFile,
-      });
-      const linter = mod.createLinter({
-        descriptor,
-        ignoreFilePath: ignoreFile,
-      });
-      linterRepo.set(folder.uri, {
-        linter,
-        availableExtensions: descriptor.availableExtensions,
-      });
-    } catch (e) {
-      TRACE("failed to configureEngine", e);
-    }
-  }
+        const mod = await resolveModule(root);
+        const descriptor = await mod.loadTextlintrc({
+          configFilePath: configFile,
+        });
+        const linter = mod.createLinter({
+          descriptor,
+          ignoreFilePath: ignoreFile,
+        });
+        lintersByWorkspaceFolderUri.set(folder.uri, {
+          linter,
+          availableExtensions: descriptor.availableExtensions,
+        });
+      } catch (error) {
+        TRACE("failed to configureEngine", error);
+      }
+    }),
+  );
 }
 
 function lookupConfig(root: string): string | undefined {
   const roots = [
     candidates(root),
     () => {
-      return settings.configPath && fs.existsSync(settings.configPath) ? [settings.configPath] : [];
+      return settings.configPath !== null && fs.existsSync(settings.configPath)
+        ? [settings.configPath]
+        : [];
     },
     candidates(os.homedir()),
   ];
@@ -123,26 +136,33 @@ function lookupConfig(root: string): string | undefined {
       return files[0];
     }
   }
-  connection.sendNotification(NoConfigNotification.type, {
+  void connection.sendNotification(NoConfigNotification.type, {
     workspaceFolder: root,
   });
+  return undefined;
 }
 
 function lookupIgnore(root: string): string | undefined {
-  const ignorePath = settings.ignorePath || path.resolve(root, ".textlintignore");
+  const ignorePath = settings.ignorePath ?? path.resolve(root, ".textlintignore");
   if (fs.existsSync(ignorePath)) {
     return ignorePath;
   }
+  return undefined;
 }
 
 async function resolveModule(root: string) {
   try {
     TRACE(`Module textlint resolve from ${root}`);
-    const path = await Files.resolveModulePath(root, "textlint", settings.nodePath ?? "", TRACE);
-    TRACE(`Module textlint got resolved to ${path}`);
-    return loadModule(path);
+    const modulePath = await Files.resolveModulePath(
+      root,
+      "textlint",
+      settings.nodePath ?? "",
+      TRACE,
+    );
+    TRACE(`Module textlint got resolved to ${modulePath}`);
+    return loadModule(modulePath);
   } catch (e) {
-    connection.sendNotification(NoLibraryNotification.type, {
+    void connection.sendNotification(NoLibraryNotification.type, {
       workspaceFolder: root,
     });
     throw e;
@@ -151,22 +171,32 @@ async function resolveModule(root: string) {
 
 const runtimeRequire = createRequire(import.meta.url);
 
-function loadModule(moduleName: string) {
-  try {
-    return runtimeRequire(moduleName);
-  } catch (err) {
-    TRACE("load failed", err);
+function loadModule(moduleName: string): TextlintModule {
+  const module: unknown = runtimeRequire(moduleName);
+  if (!isTextlintModule(module)) {
+    throw new TypeError(`${moduleName} does not provide the textlint API`);
   }
-  return;
+  return module;
+}
+
+function isTextlintModule(module: unknown): module is TextlintModule {
+  return (
+    typeof module === "object" &&
+    module !== null &&
+    "createLinter" in module &&
+    typeof module.createLinter === "function" &&
+    "loadTextlintrc" in module &&
+    typeof module.loadTextlintrc === "function"
+  );
 }
 
 async function reConfigure() {
   TRACE(`reConfigure`);
   await configureEngine(await connection.workspace.getWorkspaceFolders());
   const docs: TextDocument[] = [];
-  for (const uri of fixRepo.keys()) {
+  for (const uri of fixRepositoriesByDocumentUri.keys()) {
     TRACE(`reConfigure:push ${uri}`);
-    connection.sendDiagnostics({ uri, diagnostics: [] });
+    void connection.sendDiagnostics({ uri, diagnostics: [] });
     const doc = documents.get(uri);
     if (doc) {
       docs.push(doc);
@@ -175,12 +205,18 @@ async function reConfigure() {
   return validateMany(docs);
 }
 
-connection.onDidChangeConfiguration(async (change) => {
-  const newSettings: ServerInitializationOptions =
-    change.settings.textlint ?? defaultServerInitializationOptions;
-  TRACE(`onDidChangeConfiguration ${JSON.stringify(newSettings)}`);
-  settings = newSettings;
+async function updateSettings(): Promise<void> {
+  const configurations = await connection.sendRequest<ServerInitializationOptions[]>(
+    ConfigurationRequest.method,
+    { items: [{ section: "textlint" }] },
+  );
+  settings = configurations[0] ?? defaultServerInitializationOptions;
   trace = Trace.fromString(settings.trace);
+}
+
+connection.onDidChangeConfiguration(async () => {
+  await updateSettings();
+  TRACE("onDidChangeConfiguration", settings);
   await reConfigure();
 });
 
@@ -189,35 +225,35 @@ connection.onDidChangeWatchedFiles(async () => {
   await reConfigure();
 });
 
-documents.onDidChangeContent(async (event) => {
+documents.onDidChangeContent((event) => {
   const uri = event.document.uri;
   TRACE(`onDidChangeContent ${uri}`, settings.run);
   if (settings.run === "onType") {
-    return validateSingle(event.document);
+    void validateSingle(event.document);
   }
 });
-documents.onDidSave(async (event) => {
+documents.onDidSave((event) => {
   const uri = event.document.uri;
   TRACE(`onDidSave ${uri}`, settings.run);
   if (settings.run === "onSave") {
-    return validateSingle(event.document);
+    void validateSingle(event.document);
   }
 });
 
-documents.onDidOpen(async (event) => {
+documents.onDidOpen((event) => {
   const uri = event.document.uri;
   TRACE(`onDidOpen ${uri}`);
-  if (uri.startsWith("file:") && ! fixRepo.has(uri)) {
-    fixRepo.set(uri, new TextlintFixRepository());
-    return validateSingle(event.document);
+  if (uri.startsWith("file:") && !fixRepositoriesByDocumentUri.has(uri)) {
+    fixRepositoriesByDocumentUri.set(uri, new TextlintFixRepository());
+    void validateSingle(event.document);
   }
 });
 
 function clearDiagnostics(uri: string) {
   TRACE(`clearDiagnostics ${uri}`);
   if (uri.startsWith("file:")) {
-    fixRepo.delete(uri);
-    connection.sendDiagnostics({ uri, diagnostics: [] });
+    fixRepositoriesByDocumentUri.delete(uri);
+    void connection.sendDiagnostics({ uri, diagnostics: [] });
   }
 }
 documents.onDidClose((event) => {
@@ -226,7 +262,7 @@ documents.onDidClose((event) => {
   clearDiagnostics(uri);
 });
 
-async function validateSingle(textDocument: TextDocument) {
+function validateSingle(textDocument: TextDocument) {
   return withValidationProgress(async () => {
     try {
       await validate(textDocument);
@@ -237,16 +273,18 @@ async function validateSingle(textDocument: TextDocument) {
   });
 }
 
-async function validateMany(textDocuments: TextDocument[]) {
+function validateMany(textDocuments: TextDocument[]) {
   return withValidationProgress(async () => {
     const tracker = new ErrorMessageTracker();
-    for (const doc of textDocuments) {
-      try {
-        await validate(doc);
-      } catch (err) {
-        tracker.add(errorMessage(err));
-      }
-    }
+    await Promise.all(
+      textDocuments.map(async (document) => {
+        try {
+          await validate(document);
+        } catch (error) {
+          tracker.add(errorMessage(error));
+        }
+      }),
+    );
     tracker.sendErrors(connection);
   });
 }
@@ -292,7 +330,7 @@ function startsWith(target: string, prefix: string): boolean {
 
 function lookupEngine(doc: TextDocument): [string, WorkspaceLinter | undefined] {
   TRACE(`lookupEngine ${doc.uri}`);
-  for (const ent of linterRepo.entries()) {
+  for (const ent of lintersByWorkspaceFolderUri.entries()) {
     if (startsWith(doc.uri, ent[0])) {
       TRACE(`lookupEngine ${doc.uri} => ${ent[0]}`);
       return ent;
@@ -312,7 +350,7 @@ async function validate(doc: TextDocument): Promise<void> {
     return;
   }
 
-  const repo = fixRepo.get(documentUri);
+  const repo = fixRepositoriesByDocumentUri.get(documentUri);
   if (!repo) {
     return;
   }
@@ -361,18 +399,21 @@ function publishValidation(
   repo: TextlintFixRepository,
   entries: [TextlintMessage, Diagnostic][],
 ) {
-  if (documents.get(uri)?.version !== version || fixRepo.get(uri) !== repo) {
+  if (documents.get(uri)?.version !== version || fixRepositoriesByDocumentUri.get(uri) !== repo) {
     TRACE(`discard stale validation ${uri}`, version);
     return false;
   }
 
   repo.replace(version, entries);
   TRACE(`sendDiagnostics ${uri}`);
-  connection.sendDiagnostics({ uri, diagnostics: entries.map(([, diagnostic]) => diagnostic) });
+  void connection.sendDiagnostics({
+    uri,
+    diagnostics: entries.map(([, diagnostic]) => diagnostic),
+  });
   return true;
 }
 
-function toDiagnosticSeverity(severity?: number): DiagnosticSeverity {
+function toDiagnosticSeverity(severity: TextlintMessage["severity"]): DiagnosticSeverity {
   switch (severity) {
     case 2:
       return DiagnosticSeverity.Error;
@@ -380,12 +421,17 @@ function toDiagnosticSeverity(severity?: number): DiagnosticSeverity {
       return DiagnosticSeverity.Warning;
     case 0:
       return DiagnosticSeverity.Information;
+    case 3:
+      return DiagnosticSeverity.Information;
   }
   return DiagnosticSeverity.Information;
 }
 
 function toDiagnostic(message: TextlintMessage): [TextlintMessage, Diagnostic] {
-  const pos_start = Position.create(Math.max(0, message.line - 1), Math.max(0, message.column - 1));
+  const startPosition = Position.create(
+    Math.max(0, message.loc.start.line - 1),
+    Math.max(0, message.loc.start.column - 1),
+  );
   let offset = 0;
   if (message.message.includes("->")) {
     offset = message.message.indexOf(" ->");
@@ -394,15 +440,15 @@ function toDiagnostic(message: TextlintMessage): [TextlintMessage, Diagnostic] {
   if (quoteIndex >= 0) {
     offset = Math.max(0, message.message.indexOf(`"`, quoteIndex + 1) - quoteIndex - 1);
   }
-  const pos_end = Position.create(
-    Math.max(0, message.line - 1),
-    Math.max(0, message.column - 1) + offset,
+  const endPosition = Position.create(
+    Math.max(0, message.loc.start.line - 1),
+    Math.max(0, message.loc.start.column - 1) + offset,
   );
   const diag: Diagnostic = {
     message: message.message,
     severity: toDiagnosticSeverity(message.severity),
     source: "textlint",
-    range: Range.create(pos_start, pos_end),
+    range: Range.create(startPosition, endPosition),
     code: message.ruleId,
   };
   return [message, diag];
@@ -411,7 +457,7 @@ function toDiagnostic(message: TextlintMessage): [TextlintMessage, Diagnostic] {
 connection.onCodeAction(async (params) => {
   TRACE("onCodeAction", params);
   const uri = params.textDocument.uri;
-  const repo = fixRepo.get(uri);
+  const repo = fixRepositoriesByDocumentUri.get(uri);
   const doc = documents.get(uri);
   if (!repo || !doc) {
     return [];
@@ -445,7 +491,7 @@ connection.onCodeAction(async (params) => {
   }
   if (
     documents.get(uri)?.version !== version ||
-    fixRepo.get(uri) !== repo ||
+    fixRepositoriesByDocumentUri.get(uri) !== repo ||
     repo.version !== version ||
     repo.isEmpty()
   ) {
@@ -460,7 +506,7 @@ connection.onCodeAction(async (params) => {
       ),
     ],
   });
-  const requestedFixes = quickFixRequested ? repo.find(params.context.diagnostics) : [];
+  const requestedFixes = quickFixRequested ? repo.findMatching(params.context.diagnostics) : [];
   const quickFixes: CodeAction[] = requestedFixes.map((fix) => ({
     title: `Fix this ${fix.ruleId} problem`,
     kind: CodeActionKind.QuickFix,
@@ -506,7 +552,7 @@ function toTextEdit(textDocument: TextDocument, af: AutoFix): TextEdit {
 
 function sendOK() {
   TRACE("sendOK");
-  connection.sendNotification(StatusNotification.type, {
+  void connection.sendNotification(StatusNotification.type, {
     status: StatusNotification.Status.OK,
   });
 }
@@ -519,8 +565,8 @@ function errorStack(error: unknown): string | undefined {
 }
 
 function sendError(error: unknown) {
-  TRACE(`sendError ${error}`);
-  connection.sendNotification(StatusNotification.type, {
+  TRACE("sendError", error);
+  void connection.sendNotification(StatusNotification.type, {
     status: StatusNotification.Status.ERROR,
     message: errorMessage(error),
     cause: errorStack(error),
@@ -528,23 +574,22 @@ function sendError(error: unknown) {
 }
 
 function toVerbose(data?: unknown): string {
-  let verbose = "";
-  if (data) {
-    verbose =
-      typeof data === "string" ? data : JSON.stringify(data, Object.getOwnPropertyNames(data));
+  if (data === undefined) {
+    return "";
   }
-  return verbose;
+  return typeof data === "string" ? data : inspect(data);
 }
 
 export function TRACE(message: string, data?: unknown) {
   switch (trace) {
+    case Trace.Compact:
     case Trace.Messages:
-      connection.sendNotification(LogTraceNotification.type, {
+      void connection.sendNotification(LogTraceNotification.type, {
         message,
       });
       break;
     case Trace.Verbose:
-      connection.sendNotification(LogTraceNotification.type, {
+      void connection.sendNotification(LogTraceNotification.type, {
         message,
         verbose: toVerbose(data),
       });

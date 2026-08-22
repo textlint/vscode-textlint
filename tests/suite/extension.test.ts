@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import * as fs from "node:fs/promises";
 import * as path from "path";
-import { pathToFileURL } from "node:url";
 
 import {
   workspace,
@@ -22,14 +21,13 @@ import type { Diagnostic as LspDiagnostic } from "vscode-languageserver-types";
 import type { CodeAction as LspCodeAction } from "vscode-languageclient/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { Range as LspRange, TextEdit as LspTextEdit } from "vscode-languageserver-types";
-import type { TextlintMessage } from "@textlint/types";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
+import type { TextlintMessage } from "@textlint/types";
 
 import type { ExtensionInternal } from "../../src/client/extension";
-import type * as AutofixModule from "../../src/server/autofix";
+import { TextlintFixRepository } from "../../src/server/autofix.ts";
 
-const failures: unknown[] = [];
 const testPromises: Promise<void>[] = [];
 const TEST_TIMEOUT = 90000;
 const DIAGNOSTICS_TIMEOUT = 10000;
@@ -45,16 +43,10 @@ const PublishDiagnosticsNotification = {
 
 function checkedTest(name: string, fn: (context: TestContext) => Promise<void> | void): void {
   const testPromise = new Promise<void>((resolve, reject) => {
-    // Set timeout for all tests
-    test(name, { timeout: TEST_TIMEOUT }, async (context) => {
-      await Promise.resolve()
-        .then(() => fn(context))
-        .then(resolve)
-        .catch((error) => {
-          failures.push(error);
-          reject(error);
-          throw error;
-        });
+    void test(name, { timeout: TEST_TIMEOUT }, (context) => {
+      const result = Promise.resolve().then(() => fn(context));
+      void result.then(resolve, reject);
+      return result;
     });
   });
 
@@ -67,9 +59,10 @@ let internals: ExtensionInternal;
 /**
  * Waits for the editor to stabilize for the specified time
  */
-const waitForEditorStabilization = async (timeMs = 1000): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, timeMs));
-};
+const waitForEditorStabilization = (timeMs = 1000): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, timeMs);
+  });
 
 /**
  * Waits for a condition to become true with timeout
@@ -79,17 +72,18 @@ const waitForCondition = async (
   maxAttempts = 10,
   intervalMs = 1000,
 ): Promise<boolean> => {
-  for (let i = 0; i < maxAttempts; i++) {
-    if (condition()) {
-      return true;
-    }
-    await waitForEditorStabilization(intervalMs);
+  if (maxAttempts <= 0) {
+    return false;
   }
-  return false;
+  if (condition()) {
+    return true;
+  }
+  await waitForEditorStabilization(intervalMs);
+  return waitForCondition(condition, maxAttempts - 1, intervalMs);
 };
 
 async function setupExtension(): Promise<void> {
-  const ext = extensions.getExtension("3w36zj6.textlint");
+  const ext = extensions.getExtension<ExtensionInternal>("3w36zj6.textlint");
   if (!ext) {
     throw new Error("Extension not found");
   }
@@ -134,7 +128,8 @@ function textlintMessage(
   ruleId: string,
   range: readonly [number, number],
   text: string,
-): TextlintMessage {
+  severity: TextlintMessage["severity"] = 2,
+) {
   return {
     type: "lint",
     ruleId,
@@ -147,7 +142,7 @@ function textlintMessage(
       start: { line: 1, column: range[0] + 1 },
       end: { line: 1, column: range[1] + 1 },
     },
-    severity: 2,
+    severity,
     fix: { range, text },
   };
 }
@@ -190,9 +185,7 @@ async function setupServerFixture(
 
     // Dispose event listeners
     for (const disposable of disposables) {
-      if (disposable && typeof disposable.dispose === "function") {
-        disposable.dispose();
-      }
+      disposable.dispose();
     }
 
     // Clear array
@@ -209,13 +202,11 @@ checkedTest("Extension tests > Activate extension", async () => {
   await setupExtension();
 
   assert.ok(extension.isActive, "Extension should be active");
-  assert.ok(internals.client, "Language client should be initialized");
-  assert.ok(internals.statusBar, "Status bar should be initialized");
+  assert.notStrictEqual(internals.client, undefined, "Language client should be initialized");
+  assert.notStrictEqual(internals.statusBar, undefined, "Status bar should be initialized");
 });
 
-checkedTest("Server unit > Autofix overlap selection", async () => {
-  const moduleUrl = pathToFileURL(path.resolve(process.cwd(), "src/server/autofix.ts")).href;
-  const { TextlintFixRepository }: typeof AutofixModule = await import(moduleUrl);
+checkedTest("Server unit > Autofix overlap selection", () => {
   const repo = new TextlintFixRepository();
   const selectedRuleIds = (...messages: TextlintMessage[]) => {
     repo.replace(
@@ -278,8 +269,8 @@ checkedTest("Extension tests > Commands registration", async () => {
   const expectedCommands = ["textlint.createConfig", "textlint.showOutputChannel"];
 
   assert.deepStrictEqual(
-    textlintCommands.sort(),
-    expectedCommands.sort(),
+    textlintCommands.toSorted(),
+    expectedCommands.toSorted(),
     "Commands should match expected values",
   );
 });
@@ -290,7 +281,7 @@ checkedTest("Extension tests > Server integration > Target path matching", async
   const config = workspace.getConfiguration("textlint");
   const originalTargetPath = config.inspect<string>("targetPath")?.workspaceValue;
   const fileUriString = fileUri.toString();
-  const updateTargetPath = (targetPath: string, shouldLint: boolean) => {
+  const updateTargetPath = (targetPath: string, shouldLint: boolean): Promise<void> => {
     return new Promise<void>((resolve, reject) => {
       const listener = languages.onDidChangeDiagnostics((event) => {
         const changed = event.uris.some((uri) => uri.toString() === fileUriString);
@@ -305,7 +296,8 @@ checkedTest("Extension tests > Server integration > Target path matching", async
         listener.dispose();
         reject(new Error(`"${targetPath}" did not ${shouldLint ? "lint" : "exclude"} README.md`));
       }, DIAGNOSTICS_TIMEOUT);
-      config
+
+      void config
         .update("targetPath", targetPath, ConfigurationTarget.Workspace)
         .then(undefined, (error) => {
           listener.dispose();
@@ -322,14 +314,17 @@ checkedTest("Extension tests > Server integration > Target path matching", async
   const doc = await workspace.openTextDocument(testFile);
   await window.showTextDocument(doc);
 
-  for (const [targetPath, shouldLint] of [
-    ["*.txt", false],
-    ["README.md", true],
-    ["*", true],
-    ["**/*", true],
-  ] as const) {
-    await updateTargetPath(targetPath, shouldLint);
-  }
+  const targetPaths = [
+    { targetPath: "*.txt", shouldLint: false },
+    { targetPath: "README.md", shouldLint: true },
+    { targetPath: "*", shouldLint: true },
+    { targetPath: "**/*", shouldLint: true },
+  ];
+  await targetPaths.reduce(
+    (previous, target) =>
+      previous.then(() => updateTargetPath(target.targetPath, target.shouldLint)),
+    Promise.resolve(),
+  );
 });
 
 checkedTest("Extension tests > Server integration > Linting", async (context) => {
@@ -341,7 +336,7 @@ checkedTest("Extension tests > Server integration > Linting", async (context) =>
   const disposable = internals.client.onNotification(
     PublishDiagnosticsNotification.type,
     (params) => {
-      const notificationUri = params.uri.toString().toLowerCase();
+      const notificationUri = params.uri.toLowerCase();
       const testFileUri = fileUri.toString().toLowerCase();
 
       // Process only diagnostics related to test file
@@ -540,7 +535,9 @@ checkedTest("Extension tests > Server integration > Autofix", async (context) =>
   ]);
   assert.ok(
     concurrentFixAllActions.every((actions) =>
-      actions.some((action) => action.kind?.value === "source.fixAll.textlint" && action.edit),
+      actions.some(
+        (action) => action.kind?.value === "source.fixAll.textlint" && action.edit !== undefined,
+      ),
     ),
     "Concurrent source.fixAll.textlint requests should both receive edits",
   );
@@ -622,13 +619,9 @@ checkedTest("Extension tests > Server integration > Code Actions on Save", async
   assert.ok(fixed, "source.fixAll.textlint should apply fixes on save");
 });
 
-export const testsDone = Promise.all(testPromises).then(async () => {
-  if (failures.length > 0) {
-    throw failures[0];
-  }
-
-  await waitForEditorStabilization(250);
-});
+await Promise.all(testPromises);
+await waitForEditorStabilization(250);
+export const testsDone = Promise.resolve();
 
 // References:
 // https://github.com/Microsoft/vscode-mssql/blob/dev/test/initialization.test.ts

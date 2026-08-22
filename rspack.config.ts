@@ -1,5 +1,4 @@
 import { defineConfig } from "@rspack/cli";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const rootDirectory = import.meta.dirname;
@@ -30,8 +29,8 @@ const config = defineConfig({
   module: {
     rules: [
       {
-        test: /\.ts$/,
-        exclude: /node_modules/,
+        test: /\.ts$/u,
+        exclude: /node_modules/u,
         loader: "builtin:swc-loader",
         options: {
           detectSyntax: "auto",
