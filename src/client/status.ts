@@ -18,17 +18,17 @@ export namespace Status {
   export const OK: Status = {
     label: "textlint",
     color: "",
-    log: (logger, msg, data?) => logger.info(msg, data),
+    log: (logger, msg, data?) =>{  logger.info(msg, data); },
   };
   export const WARN: Status = {
     label: "textlint: Warning",
     color: "yellow",
-    log: (logger, msg, data?) => logger.warn(msg, data),
+    log: (logger, msg, data?) =>{  logger.warn(msg, data); },
   };
   export const ERROR: Status = {
     label: "textlint: Error",
     color: "darkred",
-    log: (logger, msg, data?) => logger.error(msg, data),
+    log: (logger, msg, data?) =>{  logger.error(msg, data); },
   };
 }
 
@@ -40,7 +40,7 @@ export class StatusBar {
   constructor(supports: string[]) {
     this._supports = supports;
     this._delegate.text = this._status.label;
-    window.onDidChangeActiveTextEditor((te) => this.updateWith(te));
+    window.onDidChangeActiveTextEditor((te) =>{  this.updateWith(te); });
     this.update();
   }
 

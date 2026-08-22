@@ -58,7 +58,7 @@ export class TextlintFixRepository {
       );
     const result = candidates.slice(0, 1);
     for (const fix of candidates.slice(1)) {
-      const lastStart = result[result.length - 1].fix.range[0];
+      const lastStart = result.at(-1).fix.range[0];
       if (fix.fix.range[1] <= lastStart) {
         result.push(fix);
       }

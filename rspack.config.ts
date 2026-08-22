@@ -2,7 +2,7 @@ import { defineConfig } from "@rspack/cli";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
+const rootDirectory = import.meta.dirname;
 
 const config = defineConfig({
   target: "node",

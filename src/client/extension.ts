@@ -76,10 +76,10 @@ To use textlint in this workspace please install textlint using 'npm install tex
 You need to reopen the workspace after installing textlint.`,
     );
   });
-  client.onNotification(LogTraceNotification.type, (p) => client.info(p.message, p.verbose));
+  client.onNotification(LogTraceNotification.type, (p) =>{  client.info(p.message, p.verbose); });
   context.subscriptions.push(
     commands.registerCommand("textlint.createConfig", createConfig),
-    commands.registerCommand("textlint.showOutputChannel", () => client.outputChannel.show()),
+    commands.registerCommand("textlint.showOutputChannel", () =>{  client.outputChannel.show(); }),
     client,
     statusBar,
   );
@@ -156,7 +156,7 @@ async function createConfig() {
 
   const noConfigs = await filterNoConfigFolders(folders);
 
-  if (noConfigs.length < 1 && 0 < folders.length) {
+  if (noConfigs.length === 0 && folders.length > 0) {
     await window.showErrorMessage("textlint configuration file already exists in this workspace.");
     return;
   }

@@ -119,7 +119,7 @@ function lookupConfig(root: string): string | undefined {
   ];
   for (const fn of roots) {
     const files = fn();
-    if (0 < files.length) {
+    if (files.length > 0) {
       return files[0];
     }
   }
@@ -157,7 +157,7 @@ function loadModule(moduleName: string) {
   } catch (err) {
     TRACE("load failed", err);
   }
-  return undefined;
+  return;
 }
 
 async function reConfigure() {
@@ -207,7 +207,7 @@ documents.onDidSave(async (event) => {
 documents.onDidOpen(async (event) => {
   const uri = event.document.uri;
   TRACE(`onDidOpen ${uri}`);
-  if (uri.startsWith("file:") && fixRepo.has(uri) === false) {
+  if (uri.startsWith("file:") && ! fixRepo.has(uri)) {
     fixRepo.set(uri, new TextlintFixRepository());
     return validateSingle(event.document);
   }
@@ -307,7 +307,7 @@ async function validate(doc: TextDocument): Promise<void> {
   const version = doc.version;
   const text = doc.getText();
   TRACE(`validate ${documentUri}`);
-  if (documentUri.startsWith("file:") === false) {
+  if (!documentUri.startsWith("file:")) {
     TRACE("validation skipped...");
     return;
   }
@@ -387,7 +387,7 @@ function toDiagnosticSeverity(severity?: number): DiagnosticSeverity {
 function toDiagnostic(message: TextlintMessage): [TextlintMessage, Diagnostic] {
   const pos_start = Position.create(Math.max(0, message.line - 1), Math.max(0, message.column - 1));
   let offset = 0;
-  if (message.message.indexOf("->") >= 0) {
+  if (message.message.includes("->")) {
     offset = message.message.indexOf(" ->");
   }
   const quoteIndex = message.message.indexOf(`"`);
