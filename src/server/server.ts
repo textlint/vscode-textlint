@@ -176,7 +176,8 @@ async function reConfigure() {
 }
 
 connection.onDidChangeConfiguration(async (change) => {
-  const newSettings: ServerInitializationOptions = change.settings.textlint ?? defaultServerInitializationOptions;
+  const newSettings: ServerInitializationOptions =
+    change.settings.textlint ?? defaultServerInitializationOptions;
   TRACE(`onDidChangeConfiguration ${JSON.stringify(newSettings)}`);
   settings = newSettings;
   trace = Trace.fromString(settings.trace);
@@ -345,7 +346,7 @@ async function validate(doc: TextDocument): Promise<void> {
       documentUri,
       version,
       repo,
-      result.messages.map((message) => toDiagnostic(message))
+      result.messages.map((message) => toDiagnostic(message)),
     );
   } catch (error) {
     if (publishValidation(documentUri, version, repo, [])) {
@@ -358,7 +359,7 @@ function publishValidation(
   uri: string,
   version: number,
   repo: TextlintFixRepository,
-  entries: [TextlintMessage, Diagnostic][]
+  entries: [TextlintMessage, Diagnostic][],
 ) {
   if (documents.get(uri)?.version !== version || fixRepo.get(uri) !== repo) {
     TRACE(`discard stale validation ${uri}`, version);
@@ -393,7 +394,10 @@ function toDiagnostic(message: TextlintMessage): [TextlintMessage, Diagnostic] {
   if (quoteIndex >= 0) {
     offset = Math.max(0, message.message.indexOf(`"`, quoteIndex + 1) - quoteIndex - 1);
   }
-  const pos_end = Position.create(Math.max(0, message.line - 1), Math.max(0, message.column - 1) + offset);
+  const pos_end = Position.create(
+    Math.max(0, message.line - 1),
+    Math.max(0, message.column - 1) + offset,
+  );
   const diag: Diagnostic = {
     message: message.message,
     severity: toDiagnosticSeverity(message.severity),
@@ -416,10 +420,16 @@ connection.onCodeAction(async (params) => {
   const version = doc.version;
   const only = params.context.only;
   const quickFixRequested =
-    only === undefined || only.some((kind) => kind === CodeActionKind.Empty || kind === CodeActionKind.QuickFix);
+    only === undefined ||
+    only.some((kind) => kind === CodeActionKind.Empty || kind === CodeActionKind.QuickFix);
   const sourceFixAllRequested =
     only?.some((kind) =>
-      [CodeActionKind.Empty, CodeActionKind.Source, CodeActionKind.SourceFixAll, sourceFixAllTextlint].includes(kind)
+      [
+        CodeActionKind.Empty,
+        CodeActionKind.Source,
+        CodeActionKind.SourceFixAll,
+        sourceFixAllTextlint,
+      ].includes(kind),
     ) ?? false;
   if (!quickFixRequested && !sourceFixAllRequested) {
     return [];
@@ -446,7 +456,7 @@ connection.onCodeAction(async (params) => {
     documentChanges: [
       TextDocumentEdit.create(
         { uri, version: repo.version },
-        fixes.map((fix) => toTextEdit(doc, fix))
+        fixes.map((fix) => toTextEdit(doc, fix)),
       ),
     ],
   });
@@ -457,19 +467,21 @@ connection.onCodeAction(async (params) => {
     diagnostics: [fix.diagnostic],
     edit: toWorkspaceEdit([fix]),
   }));
-  const sameRuleFixes: CodeAction[] = [...new Set(requestedFixes.map((fix) => fix.ruleId))].flatMap((ruleId) => {
-    const fixes = repo.separatedValues((fix) => fix.ruleId === ruleId);
-    return fixes.length > 1
-      ? [
-          {
-            title: `Fix all ${ruleId} problems`,
-            kind: CodeActionKind.QuickFix,
-            diagnostics: fixes.map((fix) => fix.diagnostic),
-            edit: toWorkspaceEdit(fixes),
-          },
-        ]
-      : [];
-  });
+  const sameRuleFixes: CodeAction[] = [...new Set(requestedFixes.map((fix) => fix.ruleId))].flatMap(
+    (ruleId) => {
+      const fixes = repo.separatedValues((fix) => fix.ruleId === ruleId);
+      return fixes.length > 1
+        ? [
+            {
+              title: `Fix all ${ruleId} problems`,
+              kind: CodeActionKind.QuickFix,
+              diagnostics: fixes.map((fix) => fix.diagnostic),
+              edit: toWorkspaceEdit(fixes),
+            },
+          ]
+        : [];
+    },
+  );
   const sourceFixes: CodeAction[] = sourceFixAllRequested
     ? [
         {
@@ -484,8 +496,11 @@ connection.onCodeAction(async (params) => {
 
 function toTextEdit(textDocument: TextDocument, af: AutoFix): TextEdit {
   return TextEdit.replace(
-    Range.create(textDocument.positionAt(af.fix.range[0]), textDocument.positionAt(af.fix.range[1])),
-    af.fix.text
+    Range.create(
+      textDocument.positionAt(af.fix.range[0]),
+      textDocument.positionAt(af.fix.range[1]),
+    ),
+    af.fix.text,
   );
 }
 
@@ -515,7 +530,8 @@ function sendError(error: unknown) {
 function toVerbose(data?: unknown): string {
   let verbose = "";
   if (data) {
-    verbose = typeof data === "string" ? data : JSON.stringify(data, Object.getOwnPropertyNames(data));
+    verbose =
+      typeof data === "string" ? data : JSON.stringify(data, Object.getOwnPropertyNames(data));
   }
   return verbose;
 }

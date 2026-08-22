@@ -1,8 +1,25 @@
-import { workspace, window, commands, ExtensionContext, QuickPickItem, WorkspaceFolder } from "vscode";
+import {
+  workspace,
+  window,
+  commands,
+  ExtensionContext,
+  QuickPickItem,
+  WorkspaceFolder,
+} from "vscode";
 
-import { State as ServerState, ErrorHandler, CloseAction, RevealOutputChannelOn } from "vscode-languageclient";
+import {
+  State as ServerState,
+  ErrorHandler,
+  CloseAction,
+  RevealOutputChannelOn,
+} from "vscode-languageclient";
 
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from "vscode-languageclient/node";
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+  TransportKind,
+} from "vscode-languageclient/node";
 
 import { LogTraceNotification } from "vscode-jsonrpc";
 
@@ -47,7 +64,7 @@ export async function activate(context: ExtensionContext): Promise<ExtensionInte
     statusBar.status.log(
       client,
       `No textlint configuration (e.g .textlintrc) found in ${p.workspaceFolder} .
-File will not be validated. Consider running the 'Create .textlintrc file' command.`
+File will not be validated. Consider running the 'Create .textlintrc file' command.`,
     );
   });
   client.onNotification(NoLibraryNotification.type, (p) => {
@@ -56,7 +73,7 @@ File will not be validated. Consider running the 'Create .textlintrc file' comma
       client,
       `Failed to load the textlint library in ${p.workspaceFolder} .
 To use textlint in this workspace please install textlint using 'npm install textlint' or globally using 'npm install -g textlint'.
-You need to reopen the workspace after installing textlint.`
+You need to reopen the workspace after installing textlint.`,
     );
   });
   client.onNotification(LogTraceNotification.type, (p) => client.info(p.message, p.verbose));
@@ -64,7 +81,7 @@ You need to reopen the workspace after installing textlint.`
     commands.registerCommand("textlint.createConfig", createConfig),
     commands.registerCommand("textlint.showOutputChannel", () => client.outputChannel.show()),
     client,
-    statusBar
+    statusBar,
   );
   await client.start();
   // for testing purpose
@@ -132,7 +149,7 @@ async function createConfig() {
   const folders = workspace.workspaceFolders;
   if (!folders) {
     await window.showErrorMessage(
-      "An textlint configuration can only be generated if VS Code is opened on a workspace folder."
+      "An textlint configuration can only be generated if VS Code is opened on a workspace folder.",
     );
     return;
   }
@@ -154,11 +171,13 @@ async function createConfig() {
   }
 }
 
-async function filterNoConfigFolders(folders: readonly WorkspaceFolder[]): Promise<WorkspaceFolder[]> {
+async function filterNoConfigFolders(
+  folders: readonly WorkspaceFolder[],
+): Promise<WorkspaceFolder[]> {
   const result = [];
   outer: for (const folder of folders) {
     const candidates = ["", ".js", ".yaml", ".yml", ".json"].map((ext) =>
-      URIUtils.joinPath(folder.uri, ".textlintrc" + ext)
+      URIUtils.joinPath(folder.uri, ".textlintrc" + ext),
     );
     for (const configPath of candidates) {
       try {
@@ -181,13 +200,15 @@ async function emitConfig(folder: WorkspaceFolder) {
   "filters": {},
   "rules": {}
 }`,
-        "utf8"
-      )
+        "utf8",
+      ),
     );
   }
 }
 
-function toQuickPickItems(folders: WorkspaceFolder[]): ({ folder: WorkspaceFolder } & QuickPickItem)[] {
+function toQuickPickItems(
+  folders: WorkspaceFolder[],
+): ({ folder: WorkspaceFolder } & QuickPickItem)[] {
   return folders.map((folder) => {
     return {
       label: folder.name,

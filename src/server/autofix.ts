@@ -21,7 +21,7 @@ export class TextlintFixRepository {
               fix: message.fix,
             },
           ]
-        : []
+        : [],
     );
     this._version = version;
   }
@@ -36,8 +36,8 @@ export class TextlintFixRepository {
           diagnostic.range.start.line === fix.diagnostic.range.start.line &&
           diagnostic.range.start.character === fix.diagnostic.range.start.character &&
           diagnostic.range.end.line === fix.diagnostic.range.end.line &&
-          diagnostic.range.end.character === fix.diagnostic.range.end.character
-      )
+          diagnostic.range.end.character === fix.diagnostic.range.end.character,
+      ),
     );
   }
 
@@ -52,7 +52,10 @@ export class TextlintFixRepository {
   separatedValues(filter: (fix: AutoFix) => boolean = () => true): AutoFix[] {
     const candidates = this.fixes
       .filter(filter)
-      .sort((left, right) => right.fix.range[1] - left.fix.range[1] || right.fix.range[0] - left.fix.range[0]);
+      .sort(
+        (left, right) =>
+          right.fix.range[1] - left.fix.range[1] || right.fix.range[0] - left.fix.range[0],
+      );
     const result = candidates.slice(0, 1);
     for (const fix of candidates.slice(1)) {
       const lastStart = result[result.length - 1].fix.range[0];

@@ -10,7 +10,7 @@ export interface Status {
       error(message: string, data?: unknown): void;
     },
     msg: string,
-    data?: unknown
+    data?: unknown,
   ) => void;
 }
 
