@@ -27,7 +27,7 @@
     "pretest": "rimraf dist",
     "pretest:e2e": "npm run type-check && npm run build",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:e2e": "node ./tests/runTest.ts",
+    "test:e2e": "node ./tests/runE2ETests.ts",
     "test:unit": "node --test src/server/*.test.ts",
     "format": "oxfmt --config oxfmt.config.ts --check",
     "format:write": "oxfmt --config oxfmt.config.ts --write",
