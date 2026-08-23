@@ -32,9 +32,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
-      - run: npm run tsc
-      - run: npm run build
-      - run: npm test
+      - run: npm run test:e2e
   linux:
     name: Linux
     runs-on: ubuntu-24.04
@@ -61,12 +59,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
-      - run: npm run tsc
-      - run: npm run build
-      - name: Run tests
+      - name: Run E2E tests
         run: |
           source /tmp/dbus.env
-          npm test
+          npm run test:e2e
   darwin:
     # Disabled due to instability issues
     if: false
@@ -92,6 +88,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
-      - run: npm run tsc
-      - run: npm run build
-      - run: npm test
+      - run: npm run test:e2e
