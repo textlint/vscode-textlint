@@ -619,6 +619,53 @@ checkedTest("Extension tests > Server integration > Code Actions on Save", async
   assert.ok(fixed, "source.fixAll.textlint should apply fixes on save");
 });
 
+checkedTest("Extension tests > Server integration > Lint on type before save", async (context) => {
+  const { testFile } = await setupServerFixture(context, "testtest-on-type.txt");
+  const fileUri = Uri.file(testFile);
+  const config = workspace.getConfiguration("textlint");
+  const originalRun = config.inspect<string>("run")?.workspaceValue;
+
+  context.after(async () => {
+    await config.update("run", originalRun, ConfigurationTarget.Workspace);
+  });
+
+  await fs.writeFile(testFile, "A clean sentence.\n", "utf8");
+  await config.update("run", "onType", ConfigurationTarget.Workspace);
+  const doc = await workspace.openTextDocument(testFile);
+  await window.showTextDocument(doc);
+  const linted = waitForDiagnostics(fileUri);
+  const edit = new WorkspaceEdit();
+  edit.insert(fileUri, new Position(0, 0), "yuo ");
+  await workspace.applyEdit(edit);
+
+  const diagnostics = await linted;
+  assert.ok(
+    diagnostics.length > 0,
+    "onType should publish diagnostics before the document is saved",
+  );
+  assert.strictEqual(
+    doc.isDirty,
+    true,
+    "the onType diagnostic should be produced for an unsaved edit",
+  );
+});
+
+checkedTest(
+  "Extension tests > Server integration > Clear diagnostics on close",
+  async (context) => {
+    const { testFile } = await setupServerFixture(context, "testtest-close.txt");
+    const fileUri = Uri.file(testFile);
+    const linted = waitForDiagnostics(fileUri);
+    const doc = await workspace.openTextDocument(testFile);
+    await window.showTextDocument(doc);
+    await linted;
+
+    await commands.executeCommand("workbench.action.closeActiveEditor");
+    const cleared = await waitForCondition(() => languages.getDiagnostics(fileUri).length === 0);
+    assert.ok(cleared, "closing a document should clear its textlint diagnostics");
+  },
+);
+
 await Promise.all(testPromises);
 await waitForEditorStabilization(250);
 export const testsDone = Promise.resolve();
