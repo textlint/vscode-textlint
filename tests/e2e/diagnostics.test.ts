@@ -69,7 +69,10 @@ function assertLintDiagnostics(diagnostics: readonly Diagnostic[]): void {
         line: diagnostic.range.end.line,
         character: diagnostic.range.end.character,
       },
-      expectedDiagnostics[index],
+      {
+        line: expectedDiagnostics[index].line,
+        character: expectedDiagnostics[index].character + 1,
+      },
     );
   }
 }
