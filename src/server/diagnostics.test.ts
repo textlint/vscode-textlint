@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { DiagnosticSeverity } from "vscode-languageserver/node";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { toDiagnostic, toDiagnosticSeverity } from "./diagnostics.ts";
 import { textlintMessage } from "./test-fixtures.ts";
 
@@ -11,17 +12,31 @@ void describe("diagnostic core", () => {
     assert.strictEqual(toDiagnosticSeverity(0), DiagnosticSeverity.Information);
     assert.strictEqual(toDiagnosticSeverity(3), DiagnosticSeverity.Information);
   });
+});
 
-  void test("preserves the current message-based range behavior", () => {
-    const plain = toDiagnostic(textlintMessage("plain", [2, 5]))[1];
-    const arrow = toDiagnostic(textlintMessage("arrow", [2, 5], "arrow", "before -> after"))[1];
-    const quoted = toDiagnostic(textlintMessage("quoted", [2, 5], "quoted", 'replace "word"'))[1];
+void describe("diagnostic ranges", () => {
+  void test("uses textlint ranges for single-line and zero-width diagnostics", () => {
+    const textDocument = TextDocument.create("file:///test.txt", "plaintext", 1, "0123456789");
+    const word = toDiagnostic(textDocument, textlintMessage("word", [2, 5]))[1];
+    const insertion = toDiagnostic(textDocument, textlintMessage("insert", [7, 7]))[1];
 
-    assert.deepStrictEqual(plain.range, {
+    assert.deepStrictEqual(word.range, {
       start: { line: 0, character: 2 },
-      end: { line: 0, character: 2 },
+      end: { line: 0, character: 5 },
     });
-    assert.strictEqual(arrow.range.end.character, 8);
-    assert.strictEqual(quoted.range.end.character, 6);
+    assert.deepStrictEqual(insertion.range, {
+      start: { line: 0, character: 7 },
+      end: { line: 0, character: 7 },
+    });
+  });
+
+  void test("converts multiline and surrogate-pair offsets with the document", () => {
+    const textDocument = TextDocument.create("file:///test.txt", "plaintext", 1, "😀abc\ndef");
+    const multiline = toDiagnostic(textDocument, textlintMessage("multiline", [2, 8]))[1];
+
+    assert.deepStrictEqual(multiline.range, {
+      start: { line: 0, character: 2 },
+      end: { line: 1, character: 2 },
+    });
   });
 });
