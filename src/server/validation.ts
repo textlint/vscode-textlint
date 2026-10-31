@@ -103,7 +103,7 @@ async function lintDocument(
     document.uri,
     document.version,
     slot,
-    result.messages.map((message) => toDiagnostic(message)),
+    result.messages.map((message) => toDiagnostic(document, message)),
   );
 }
 
