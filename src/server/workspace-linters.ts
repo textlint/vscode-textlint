@@ -134,6 +134,7 @@ async function configureFolder(
       linter: module.createLinter({
         descriptor,
         ignoreFilePath: ignoreFile,
+        cwd: root,
       }),
       availableExtensions: descriptor.availableExtensions,
     });
